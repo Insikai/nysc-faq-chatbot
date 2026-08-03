@@ -1,10 +1,14 @@
 import pandas as pd
 import string
+import glob
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity 
+csv_files = glob.glob("app/data/*.csv")
+dataframes = [pd.read_csv(file) for file in csv_files]
+df = pd.concat(dataframes, ignore_index=True)
 
-
-df = pd.read_csv("app/data/nysc_faq.csv")
+print(f"Loaded {len(csv_files)} CSV files.")
+print(f"Total FAQs: {len(df)}")
 
 def preprocess_text(text):
     text = text.lower()
@@ -16,7 +20,7 @@ df["Cleaned_Question"] = df["Question"].apply(preprocess_text)
 vectorizer = TfidfVectorizer(stop_words="english")
 X = vectorizer.fit_transform(df["Cleaned_Question"])
 
-print("===== NYSC FAQ Chatbot =====")
+print("\n===== NYSC FAQ Chatbot =====")
 print("Type 'exit' to quit.\n")
 
 while True:
@@ -40,8 +44,17 @@ while True:
 
     print(f"\nSimilarity Score: {best_score:.2f}")
 
-    if best_score < 0.30:
-        print("\nChatbot: Sorry, I don't have an answer to that question.\n")
+    if best_score < 0.70:
+        print("\nChatbot: Sorry, I don't have an answer to that question.")
+
+        top_matches = similarity[0].argsort()[-3:][::-1]
+
+        print("\nDid you mean:")
+        for i in top_matches:
+            print(f"- {df.iloc[i]['Question']}")
+        print()
+
     else:
-        print("\nChatbot:", df.iloc[best_match]["Answer"])
+        print("\nCategory:", df.iloc[best_match]["Category"])
+        print("Chatbot:", df.iloc[best_match]["Answer"])
         print()
