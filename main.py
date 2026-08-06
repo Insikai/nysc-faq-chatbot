@@ -4,7 +4,19 @@ import glob
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity 
 csv_files = glob.glob("app/data/*.csv")
-dataframes = [pd.read_csv(file) for file in csv_files]
+dataframes = []
+
+for file in csv_files:
+    try:
+        df = pd.read_csv(file)
+
+        if not df.empty:
+            dataframes.append(df)
+
+    except pd.errors.EmptyDataError:
+        print(f"Skipped empty file: {file}")
+
+df = pd.concat(dataframes, ignore_index=True)
 df = pd.concat(dataframes, ignore_index=True)
 
 print(f"Loaded {len(csv_files)} CSV files.")
