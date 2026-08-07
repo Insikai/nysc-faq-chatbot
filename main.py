@@ -1,37 +1,16 @@
 import pandas as pd
-import string
-import glob
+from app.search import SearchEngine
+from app.dataset import load_dataset
+from app.preprocess import preprocess_text
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity 
-csv_files = glob.glob("app/data/*.csv")
-dataframes = []
+from sklearn.metrics.pairwise import cosine_similarity
 
-for file in csv_files:
-    try:
-        df = pd.read_csv(file)
+df = load_dataset()
 
-        if not df.empty:
-            dataframes.append(df)
-
-    except pd.errors.EmptyDataError:
-        print(f"Skipped empty file: {file}")
-
-df = pd.concat(dataframes, ignore_index=True)
-df = pd.concat(dataframes, ignore_index=True)
-
-print(f"Loaded {len(csv_files)} CSV files.")
-print(f"Total FAQs: {len(df)}")
-
-def preprocess_text(text):
-    text = text.lower()
-    text = text.translate(str.maketrans("", "", string.punctuation))
-    return text
 
 df["Cleaned_Question"] = df["Question"].apply(preprocess_text)
 
-vectorizer = TfidfVectorizer(stop_words="english")
-X = vectorizer.fit_transform(df["Cleaned_Question"])
-
+search_engine = SearchEngine(df, preprocess_text)
 print("\n===== NYSC FAQ Chatbot =====")
 print("Type 'exit' to quit.\n")
 
@@ -46,26 +25,18 @@ while True:
         print("Chatbot: Goodbye!")
         break
 
-    cleaned_question = preprocess_text(user_question)
-    user_vector = vectorizer.transform([cleaned_question])
-
-    similarity = cosine_similarity(user_vector, X)
-
-    best_match = similarity.argmax()
-    best_score = similarity[0][best_match]
+    top_matches, best_match, best_score, similarity = search_engine.search(user_question)
 
     print(f"\nSimilarity Score: {best_score:.2f}")
 
+    print("\nTop Matches:")
+    for rank, i in enumerate(top_matches, start=1):
+        score = similarity[0][i]
+        print(f"{rank}. {df.iloc[i]['Question']} ({score:.2f})")
+
     if best_score < 0.70:
-        print("\nChatbot: Sorry, I don't have an answer to that question.")
-
-        top_matches = similarity[0].argsort()[-3:][::-1]
-
-        print("\nDid you mean:")
-        for i in top_matches:
-            print(f"- {df.iloc[i]['Question']}")
-        print()
-
+        print("\nChatbot: Sorry, I don't have an exact answer.")
+        print("Please try one of the suggested questions above.\n")
     else:
         print("\nCategory:", df.iloc[best_match]["Category"])
         print("Chatbot:", df.iloc[best_match]["Answer"])
