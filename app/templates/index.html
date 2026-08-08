@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>NYSC FAQ Chatbot</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+    }
+
+    .container {
+        max-width: 850px;
+        height: 90vh;
+        margin: 30px auto;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .header {
+        padding: 22px;
+        text-align: center;
+        background: #222;
+        color: white;
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 24px;
+    }
+
+    .header p {
+        margin: 8px 0 0;
+        font-size: 14px;
+        opacity: 0.8;
+    }
+
+    #chat {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .message {
+        margin-bottom: 18px;
+        display: flex;
+    }
+
+    .user {
+        justify-content: flex-end;
+    }
+
+    .bot {
+        justify-content: flex-start;
+    }
+
+    .bubble {
+        max-width: 75%;
+        padding: 13px 16px;
+        border-radius: 12px;
+        line-height: 1.5;
+    }
+
+    .user .bubble {
+        background: #222;
+        color: white;
+        border-bottom-right-radius: 3px;
+    }
+
+    .bot .bubble {
+        background: #f0f2f4;
+        color: #222;
+        border-bottom-left-radius: 3px;
+    }
+
+    .category {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 7px;
+    }
+
+    .score {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #777;
+    }
+
+    .suggestions {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+    }
+
+    .suggestion {
+        margin: 6px 0;
+        font-size: 13px;
+    }
+
+    .input-area {
+        display: flex;
+        gap: 10px;
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background: white;
+    }
+
+    #question {
+        flex: 1;
+        padding: 13px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 15px;
+        outline: none;
+    }
+
+    #question:focus {
+        border-color: #555;
+    }
+
+    button {
+        padding: 13px 22px;
+        border: none;
+        border-radius: 8px;
+        background: #222;
+        color: white;
+        cursor: pointer;
+        font-size: 15px;
+    }
+
+    button:hover {
+        opacity: 0.85;
+    }
+
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .portal {
+        text-align: center;
+        padding: 10px 15px 15px;
+        font-size: 13px;
+        background: white;
+    }
+
+    .portal a {
+        color: #222;
+        font-weight: bold;
+    }
+
+    .typing {
+        color: #777;
+        font-style: italic;
+    }
+
+    @media (max-width: 600px) {
+        .container {
+            width: 100%;
+            height: 100vh;
+            margin: 0;
+            border-radius: 0;
+        }
+
+        .bubble {
+            max-width: 85%;
+        }
+
+        .header h1 {
+            font-size: 20px;
+        }
+    }
+</style>
+```
+
+</head>
+
+<body>
+
+<div class="container">
+
+```
+<div class="header">
+    <h1>NYSC FAQ Chatbot</h1>
+    <p>Ask questions about NYSC registration, camp, relocation and more.</p>
+</div>
+
+<div id="chat">
+
+    <div class="message bot">
+        <div class="bubble">
+            Hello! 👋<br><br>
+            I'm the NYSC FAQ Chatbot. Ask me a question about
+            registration, camp, relocation, exemption or other
+            NYSC-related topics.
+        </div>
+    </div>
+
+</div>
+
+<div class="input-area">
+
+    <input
+        type="text"
+        id="question"
+        placeholder="Ask your NYSC question..."
+        autocomplete="off"
+    >
+
+    <button id="askButton" onclick="askQuestion()">
+        Ask
+    </button>
+
+</div>
+
+<div class="portal">
+    Need to register or access your dashboard?
+    <a
+        href="https://portal.nysc.org.ng/"
+        target="_blank"
+        rel="noopener noreferrer"
+    >
+        Visit the official NYSC portal
+    </a>
+</div>
+```
+
+</div>
+
+<script>
+
+async function askQuestion() {
+
+    const input = document.getElementById("question");
+    const button = document.getElementById("askButton");
+    const chat = document.getElementById("chat");
+
+    const question = input.value.trim();
+
+    if (!question) {
+        return;
+    }
+
+    // Show user's question
+    chat.innerHTML += `
+        <div class="message user">
+            <div class="bubble">
+                ${question}
+            </div>
+        </div>
+    `;
+
+    input.value = "";
+    button.disabled = true;
+
+    // Show typing message
+    chat.innerHTML += `
+        <div class="message bot" id="typing">
+            <div class="bubble typing">
+                Searching the NYSC FAQ database...
+            </div>
+        </div>
+    `;
+
+    chat.scrollTop = chat.scrollHeight;
+
+    try {
+
+        const response = await fetch("/ask", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                question: question
+            })
+        });
+
+        const data = await response.json();
+
+        const typing = document.getElementById("typing");
+
+        if (typing) {
+            typing.remove();
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || "Server error");
+        }
+
+        let matchesHTML = "";
+
+        if (data.matches && data.matches.length > 0) {
+
+            matchesHTML = `
+                <div class="suggestions">
+                    <strong>Top Matches</strong>
+                    ${data.matches.map(match => `
+                        <div class="suggestion">
+                            ${match.question}
+                            <br>
+                            <small>Similarity: ${match.score}</small>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
+        }
+
+        const categoryHTML = data.category
+            ? `<div class="category">Category: ${data.category}</div>`
+            : "";
+
+        chat.innerHTML += `
+            <div class="message bot">
+                <div class="bubble">
+
+                    ${categoryHTML}
+
+                    <div>
+                        ${data.answer}
+                    </div>
+
+                    <div class="score">
+                        Similarity Score: ${data.score}
+                    </div>
+
+                    ${matchesHTML}
+
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+
+        const typing = document.getElementById("typing");
+
+        if (typing) {
+            typing.remove();
+        }
+
+        chat.innerHTML += `
+            <div class="message bot">
+                <div class="bubble">
+                    Unable to connect to the chatbot server.
+                </div>
+            </div>
+        `;
+
+        console.error(error);
+
+    } finally {
+
+        button.disabled = false;
+        input.focus();
+        chat.scrollTop = chat.scrollHeight;
+    }
+}
+
+
+// Press Enter to ask
+document.getElementById("question").addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+        askQuestion();
+    }
+
+});
+
+</script>
+
+</body>
+
+</html>
