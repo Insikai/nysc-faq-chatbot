@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +20,7 @@
     }
 
     .container {
+        width: 90%;
         max-width: 850px;
         height: 90vh;
         margin: 30px auto;
@@ -57,8 +57,8 @@
     }
 
     .message {
-        margin-bottom: 18px;
         display: flex;
+        margin-bottom: 18px;
     }
 
     .user {
@@ -91,7 +91,7 @@
     .category {
         font-size: 13px;
         font-weight: bold;
-        margin-bottom: 7px;
+        margin-bottom: 8px;
     }
 
     .score {
@@ -107,8 +107,21 @@
     }
 
     .suggestion {
-        margin: 6px 0;
-        font-size: 13px;
+        margin-top: 8px;
+    }
+
+    .suggestion button {
+        width: 100%;
+        padding: 8px;
+        text-align: left;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+    }
+
+    .suggestion button:hover {
+        background: #eee;
     }
 
     .input-area {
@@ -116,7 +129,6 @@
         gap: 10px;
         padding: 15px;
         border-top: 1px solid #ddd;
-        background: white;
     }
 
     #question {
@@ -125,37 +137,26 @@
         border: 1px solid #ccc;
         border-radius: 8px;
         font-size: 15px;
-        outline: none;
     }
 
-    #question:focus {
-        border-color: #555;
-    }
-
-    button {
+    #askButton {
         padding: 13px 22px;
         border: none;
         border-radius: 8px;
         background: #222;
         color: white;
         cursor: pointer;
-        font-size: 15px;
     }
 
-    button:hover {
-        opacity: 0.85;
-    }
-
-    button:disabled {
+    #askButton:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
 
     .portal {
         text-align: center;
-        padding: 10px 15px 15px;
+        padding: 12px;
         font-size: 13px;
-        background: white;
     }
 
     .portal a {
@@ -179,10 +180,6 @@
         .bubble {
             max-width: 85%;
         }
-
-        .header h1 {
-            font-size: 20px;
-        }
     }
 </style>
 ```
@@ -203,7 +200,8 @@
 
     <div class="message bot">
         <div class="bubble">
-            Hello! 👋<br><br>
+            Hello! 👋
+            <br><br>
             I'm the NYSC FAQ Chatbot. Ask me a question about
             registration, camp, relocation, exemption or other
             NYSC-related topics.
@@ -221,15 +219,14 @@
         autocomplete="off"
     >
 
-    <button id="askButton" onclick="askQuestion()">
+    <button id="askButton">
         Ask
     </button>
 
 </div>
 
 <div class="portal">
-    Need to register or access your dashboard?
-    <a
+        <a
         href="https://portal.nysc.org.ng/"
         target="_blank"
         rel="noopener noreferrer"
@@ -243,139 +240,215 @@
 
 <script>
 
+const chat = document.getElementById("chat");
+const questionInput = document.getElementById("question");
+const askButton = document.getElementById("askButton");
+
+
+function addMessage(text, type) {
+
+    const message = document.createElement("div");
+
+    message.className = "message " + type;
+
+    const bubble = document.createElement("div");
+
+    bubble.className = "bubble";
+
+    bubble.innerHTML = text;
+
+    message.appendChild(bubble);
+
+    chat.appendChild(message);
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+
 async function askQuestion() {
 
-    const input = document.getElementById("question");
-    const button = document.getElementById("askButton");
-    const chat = document.getElementById("chat");
-
-    const question = input.value.trim();
+    const question = questionInput.value.trim();
 
     if (!question) {
         return;
     }
 
-    // Show user's question
-    chat.innerHTML += `
-        <div class="message user">
-            <div class="bubble">
-                ${question}
-            </div>
-        </div>
-    `;
 
-    input.value = "";
-    button.disabled = true;
+    addMessage(
+        question.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+        "user"
+    );
 
-    // Show typing message
-    chat.innerHTML += `
-        <div class="message bot" id="typing">
-            <div class="bubble typing">
-                Searching the NYSC FAQ database...
-            </div>
-        </div>
-    `;
 
-    chat.scrollTop = chat.scrollHeight;
+    questionInput.value = "";
+
+
+    askButton.disabled = true;
+
+
+    addMessage(
+        '<span class="typing">Chatbot is thinking...</span>',
+        "bot"
+    );
+
 
     try {
 
         const response = await fetch("/ask", {
+
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
                 question: question
             })
+
         });
+
 
         const data = await response.json();
 
-        const typing = document.getElementById("typing");
 
-        if (typing) {
-            typing.remove();
+        const messages = document.querySelectorAll(".message");
+
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage &&
+            lastMessage.querySelector(".typing")) {
+
+            lastMessage.remove();
+
         }
+
 
         if (!response.ok) {
-            throw new Error(data.error || "Server error");
+
+            addMessage(
+                data.error || "Something went wrong.",
+                "bot"
+            );
+
+            return;
         }
 
-        let matchesHTML = "";
+
+        let answer = "";
+
+
+        if (data.category) {
+
+            answer += `
+                <div class="category">
+                    Category: ${data.category}
+                </div>
+            `;
+
+        }
+
+
+        answer += `
+            <div>
+                ${data.answer}
+            </div>
+        `;
+
+
+        answer += `
+            <div class="score">
+                Similarity Score: ${data.score}
+            </div>
+        `;
+
 
         if (data.matches && data.matches.length > 0) {
 
-            matchesHTML = `
+            answer += `
                 <div class="suggestions">
                     <strong>Top Matches</strong>
-                    ${data.matches.map(match => `
-                        <div class="suggestion">
+            `;
+
+
+            data.matches.forEach(function(match) {
+
+                answer += `
+                    <div class="suggestion">
+                        <button
+                            onclick="useSuggestion(this)"
+                        >
                             ${match.question}
-                            <br>
-                            <small>Similarity: ${match.score}</small>
+                        </button>
+
+                        <div class="score">
+                            Similarity: ${match.score}
                         </div>
-                    `).join("")}
+                    </div>
+                `;
+
+            });
+
+
+            answer += `
                 </div>
             `;
+
         }
 
-        const categoryHTML = data.category
-            ? `<div class="category">Category: ${data.category}</div>`
-            : "";
 
-        chat.innerHTML += `
-            <div class="message bot">
-                <div class="bubble">
+        addMessage(answer, "bot");
 
-                    ${categoryHTML}
-
-                    <div>
-                        ${data.answer}
-                    </div>
-
-                    <div class="score">
-                        Similarity Score: ${data.score}
-                    </div>
-
-                    ${matchesHTML}
-
-                </div>
-            </div>
-        `;
 
     } catch (error) {
 
-        const typing = document.getElementById("typing");
+        const messages = document.querySelectorAll(".message");
 
-        if (typing) {
-            typing.remove();
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage &&
+            lastMessage.querySelector(".typing")) {
+
+            lastMessage.remove();
+
         }
 
-        chat.innerHTML += `
-            <div class="message bot">
-                <div class="bubble">
-                    Unable to connect to the chatbot server.
-                </div>
-            </div>
-        `;
+
+        addMessage(
+            "Unable to connect to the chatbot server.",
+            "bot"
+        );
 
         console.error(error);
 
-    } finally {
-
-        button.disabled = false;
-        input.focus();
-        chat.scrollTop = chat.scrollHeight;
     }
+
+
+    askButton.disabled = false;
+
+    questionInput.focus();
+
 }
 
 
-// Press Enter to ask
-document.getElementById("question").addEventListener("keydown", function(event) {
+function useSuggestion(button) {
+
+    questionInput.value = button.innerText;
+
+    askQuestion();
+
+}
+
+
+askButton.addEventListener("click", askQuestion);
+
+
+questionInput.addEventListener("keydown", function(event) {
 
     if (event.key === "Enter") {
+
         askQuestion();
+
     }
 
 });
@@ -383,5 +456,4 @@ document.getElementById("question").addEventListener("keydown", function(event) 
 </script>
 
 </body>
-
 </html>
