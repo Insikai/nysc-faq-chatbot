@@ -20,6 +20,7 @@ class SearchEngine:
         )
 
         self.intent_keywords = {
+
             "Eligibility": {
                 "age",
                 "eligible",
@@ -56,16 +57,22 @@ class SearchEngine:
             "Exclusion": {
                 "exemption",
                 "exempt",
-                "excluded"
+                "excluded",
+                "doesnt",
+                "not",
+                "required",
+                "serve"
             },
 
             "Office": {
                 "office",
                 "headquarters",
-                "address"
+                "address",
+                "contact",
+                "phone",
+                "email"
             }
         }
-
 
     def detect_intent(self, question):
 
@@ -91,7 +98,6 @@ class SearchEngine:
             return None
 
         return best_category
-
 
     def search(self, question):
 
@@ -150,7 +156,6 @@ class SearchEngine:
                 if category == intent:
                     final_scores[i] += 0.10
 
-        # Keep scores between 0 and 1
         final_scores = np.clip(
             final_scores,
             0.0,
