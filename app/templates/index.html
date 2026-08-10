@@ -1,459 +1,476 @@
+```html
 <!DOCTYPE html>
-
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-```
-<title>NYSC FAQ Chatbot</title>
+    <title>NYSC FAQ Chatbot</title>
 
-<style>
-    * {
-        box-sizing: border-box;
-    }
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-    }
-
-    .container {
-        width: 90%;
-        max-width: 850px;
-        height: 90vh;
-        margin: 30px auto;
-        background: white;
-        border-radius: 14px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .header {
-        padding: 22px;
-        text-align: center;
-        background: #222;
-        color: white;
-    }
-
-    .header h1 {
-        margin: 0;
-        font-size: 24px;
-    }
-
-    .header p {
-        margin: 8px 0 0;
-        font-size: 14px;
-        opacity: 0.8;
-    }
-
-    #chat {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-    }
-
-    .message {
-        display: flex;
-        margin-bottom: 18px;
-    }
-
-    .user {
-        justify-content: flex-end;
-    }
-
-    .bot {
-        justify-content: flex-start;
-    }
-
-    .bubble {
-        max-width: 75%;
-        padding: 13px 16px;
-        border-radius: 12px;
-        line-height: 1.5;
-    }
-
-    .user .bubble {
-        background: #222;
-        color: white;
-        border-bottom-right-radius: 3px;
-    }
-
-    .bot .bubble {
-        background: #f0f2f4;
-        color: #222;
-        border-bottom-left-radius: 3px;
-    }
-
-    .category {
-        font-size: 13px;
-        font-weight: bold;
-        margin-bottom: 8px;
-    }
-
-    .score {
-        margin-top: 8px;
-        font-size: 12px;
-        color: #777;
-    }
-
-    .suggestions {
-        margin-top: 12px;
-        padding-top: 10px;
-        border-top: 1px solid #ddd;
-    }
-
-    .suggestion {
-        margin-top: 8px;
-    }
-
-    .suggestion button {
-        width: 100%;
-        padding: 8px;
-        text-align: left;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-    }
-
-    .suggestion button:hover {
-        background: #eee;
-    }
-
-    .input-area {
-        display: flex;
-        gap: 10px;
-        padding: 15px;
-        border-top: 1px solid #ddd;
-    }
-
-    #question {
-        flex: 1;
-        padding: 13px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 15px;
-    }
-
-    #askButton {
-        padding: 13px 22px;
-        border: none;
-        border-radius: 8px;
-        background: #222;
-        color: white;
-        cursor: pointer;
-    }
-
-    #askButton:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-
-    .portal {
-        text-align: center;
-        padding: 12px;
-        font-size: 13px;
-    }
-
-    .portal a {
-        color: #222;
-        font-weight: bold;
-    }
-
-    .typing {
-        color: #777;
-        font-style: italic;
-    }
-
-    @media (max-width: 600px) {
-        .container {
-            width: 100%;
-            height: 100vh;
+        body {
             margin: 0;
-            border-radius: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 850px;
+            height: 90vh;
+            margin: 30px auto;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 22px;
+            text-align: center;
+            background: #222;
+            color: white;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        #chat {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 18px;
+        }
+
+        .user {
+            justify-content: flex-end;
+        }
+
+        .bot {
+            justify-content: flex-start;
         }
 
         .bubble {
-            max-width: 85%;
+            max-width: 75%;
+            padding: 13px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
         }
-    }
-</style>
-```
 
+        .user .bubble {
+            background: #222;
+            color: white;
+            border-bottom-right-radius: 3px;
+        }
+
+        .bot .bubble {
+            background: #f0f2f4;
+            color: #222;
+            border-bottom-left-radius: 3px;
+        }
+
+        .category {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .score {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #777;
+        }
+
+        .suggestions {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .suggestion {
+            margin-top: 8px;
+        }
+
+        .suggestion button {
+            width: 100%;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .suggestion button:hover {
+            background: #eee;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+
+        #question {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        #askButton {
+            padding: 13px 22px;
+            border: none;
+            border-radius: 8px;
+            background: #222;
+            color: white;
+            cursor: pointer;
+        }
+
+        #askButton:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .portal {
+            text-align: center;
+            padding: 12px;
+            font-size: 13px;
+        }
+
+        .portal a {
+            color: #222;
+            font-weight: bold;
+        }
+
+        .typing {
+            color: #777;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 100%;
+                height: 100vh;
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .bubble {
+                max-width: 85%;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container">
 
-```
-<div class="header">
-    <h1>NYSC FAQ Chatbot</h1>
-    <p>Ask questions about NYSC registration, camp, relocation and more.</p>
-</div>
-
-<div id="chat">
-
-    <div class="message bot">
-        <div class="bubble">
-            Hello! 👋
-            <br><br>
-            I'm the NYSC FAQ Chatbot. Ask me a question about
-            registration, camp, relocation, exemption or other
-            NYSC-related topics.
+        <div class="header">
+            <h1>NYSC FAQ Chatbot</h1>
+            <p>Ask questions about NYSC registration, camp, relocation and more.</p>
         </div>
+
+        <div id="chat">
+
+            <div class="message bot">
+                <div class="bubble">
+                    Hello! 👋
+                    <br><br>
+                    I'm the NYSC FAQ Chatbot. Ask me a question about
+                    registration, camp, relocation, exemption or other
+                    NYSC-related topics.
+                </div>
+            </div>
+
+        </div>
+
+        <div class="input-area">
+
+            <input
+                type="text"
+                id="question"
+                placeholder="Ask your NYSC question..."
+                autocomplete="off"
+            >
+
+            <button id="askButton">
+                Ask
+            </button>
+
+        </div>
+
+        <div class="portal">
+            <a
+                href="https://portal.nysc.org.ng/"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Visit the official NYSC portal
+            </a>
+        </div>
+
     </div>
 
-</div>
 
-<div class="input-area">
+    <script>
 
-    <input
-        type="text"
-        id="question"
-        placeholder="Ask your NYSC question..."
-        autocomplete="off"
-    >
+        const chat = document.getElementById("chat");
+        const questionInput = document.getElementById("question");
+        const askButton = document.getElementById("askButton");
 
-    <button id="askButton">
-        Ask
-    </button>
-
-</div>
-
-<div class="portal">
-        <a
-        href="https://portal.nysc.org.ng/"
-        target="_blank"
-        rel="noopener noreferrer"
-    >
-        Visit the official NYSC portal
-    </a>
-</div>
-```
-
-</div>
-
-<script>
-
-const chat = document.getElementById("chat");
-const questionInput = document.getElementById("question");
-const askButton = document.getElementById("askButton");
+        // Lesson 25:
+        // Store the previous question so the chatbot can
+        // understand possible follow-up questions.
+        window.lastQuestion = "";
 
 
-function addMessage(text, type) {
+        function addMessage(text, type) {
 
-    const message = document.createElement("div");
+            const message = document.createElement("div");
 
-    message.className = "message " + type;
+            message.className = "message " + type;
 
-    const bubble = document.createElement("div");
+            const bubble = document.createElement("div");
 
-    bubble.className = "bubble";
+            bubble.className = "bubble";
 
-    bubble.innerHTML = text;
+            bubble.innerHTML = text;
 
-    message.appendChild(bubble);
+            message.appendChild(bubble);
 
-    chat.appendChild(message);
+            chat.appendChild(message);
 
-    chat.scrollTop = chat.scrollHeight;
-}
-
-
-async function askQuestion() {
-
-    const question = questionInput.value.trim();
-
-    if (!question) {
-        return;
-    }
-
-
-    addMessage(
-        question.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-        "user"
-    );
-
-
-    questionInput.value = "";
-
-
-    askButton.disabled = true;
-
-
-    addMessage(
-        '<span class="typing">Chatbot is thinking...</span>',
-        "bot"
-    );
-
-
-    try {
-
-        const response = await fetch("/ask", {
-
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                question: question
-            })
-
-        });
-
-
-        const data = await response.json();
-
-
-        const messages = document.querySelectorAll(".message");
-
-        const lastMessage = messages[messages.length - 1];
-
-        if (lastMessage &&
-            lastMessage.querySelector(".typing")) {
-
-            lastMessage.remove();
-
+            chat.scrollTop = chat.scrollHeight;
         }
 
 
-        if (!response.ok) {
+        async function askQuestion() {
+
+            const question = questionInput.value.trim();
+
+            if (!question) {
+                return;
+            }
+
 
             addMessage(
-                data.error || "Something went wrong.",
+                question.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                "user"
+            );
+
+
+            questionInput.value = "";
+
+            // Save the current question for the next message.
+            const previousQuestion = window.lastQuestion;
+
+            window.lastQuestion = question;
+
+
+            askButton.disabled = true;
+
+
+            addMessage(
+                '<span class="typing">Chatbot is thinking...</span>',
                 "bot"
             );
 
-            return;
-        }
+
+            try {
+
+                const response = await fetch("/ask", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        question: question,
+                        previous_question: previousQuestion
+                    })
+
+                });
 
 
-        let answer = "";
+                const data = await response.json();
 
 
-        if (data.category) {
+                const messages = document.querySelectorAll(".message");
 
-            answer += `
-                <div class="category">
-                    Category: ${data.category}
-                </div>
-            `;
-
-        }
+                const lastMessage = messages[messages.length - 1];
 
 
-        answer += `
-            <div>
-                ${data.answer}
-            </div>
-        `;
+                if (
+                    lastMessage &&
+                    lastMessage.querySelector(".typing")
+                ) {
+                    lastMessage.remove();
+                }
 
 
-        answer += `
-            <div class="score">
-                Similarity Score: ${data.score}
-            </div>
-        `;
+                if (!response.ok) {
+
+                    addMessage(
+                        data.error || "Something went wrong.",
+                        "bot"
+                    );
+
+                    return;
+                }
 
 
-        if (data.matches && data.matches.length > 0) {
-
-            answer += `
-                <div class="suggestions">
-                    <strong>Top Matches</strong>
-            `;
+                let answer = "";
 
 
-            data.matches.forEach(function(match) {
+                if (data.category) {
+
+                    answer += `
+                        <div class="category">
+                            Category: ${data.category}
+                        </div>
+                    `;
+                }
+
 
                 answer += `
-                    <div class="suggestion">
-                        <button
-                            onclick="useSuggestion(this)"
-                        >
-                            ${match.question}
-                        </button>
-
-                        <div class="score">
-                            Similarity: ${match.score}
-                        </div>
+                    <div>
+                        ${data.answer}
                     </div>
                 `;
 
-            });
+
+                answer += `
+                    <div class="score">
+                        Similarity Score: ${data.score}
+                    </div>
+                `;
 
 
-            answer += `
-                </div>
-            `;
+                if (data.matches && data.matches.length > 0) {
+
+                    answer += `
+                        <div class="suggestions">
+                            <strong>Top Matches</strong>
+                    `;
+
+
+                    data.matches.forEach(function(match) {
+
+                        answer += `
+                            <div class="suggestion">
+
+                                <button
+                                    onclick="useSuggestion(this)"
+                                >
+                                    ${match.question}
+                                </button>
+
+                                <div class="score">
+                                    Similarity: ${match.score}
+                                </div>
+
+                            </div>
+                        `;
+
+                    });
+
+
+                    answer += `
+                        </div>
+                    `;
+                }
+
+
+                addMessage(answer, "bot");
+
+
+            } catch (error) {
+
+                const messages = document.querySelectorAll(".message");
+
+                const lastMessage = messages[messages.length - 1];
+
+
+                if (
+                    lastMessage &&
+                    lastMessage.querySelector(".typing")
+                ) {
+                    lastMessage.remove();
+                }
+
+
+                addMessage(
+                    "Unable to connect to the chatbot server.",
+                    "bot"
+                );
+
+
+                console.error(error);
+
+            }
+
+
+            askButton.disabled = false;
+
+            questionInput.focus();
 
         }
 
 
-        addMessage(answer, "bot");
+        function useSuggestion(button) {
 
+            questionInput.value = button.innerText;
 
-    } catch (error) {
-
-        const messages = document.querySelectorAll(".message");
-
-        const lastMessage = messages[messages.length - 1];
-
-        if (lastMessage &&
-            lastMessage.querySelector(".typing")) {
-
-            lastMessage.remove();
+            askQuestion();
 
         }
 
 
-        addMessage(
-            "Unable to connect to the chatbot server.",
-            "bot"
+        askButton.addEventListener(
+            "click",
+            askQuestion
         );
 
-        console.error(error);
 
-    }
+        questionInput.addEventListener(
+            "keydown",
+            function(event) {
 
+                if (event.key === "Enter") {
+                    askQuestion();
+                }
 
-    askButton.disabled = false;
+            }
+        );
 
-    questionInput.focus();
-
-}
-
-
-function useSuggestion(button) {
-
-    questionInput.value = button.innerText;
-
-    askQuestion();
-
-}
-
-
-askButton.addEventListener("click", askQuestion);
-
-
-questionInput.addEventListener("keydown", function(event) {
-
-    if (event.key === "Enter") {
-
-        askQuestion();
-
-    }
-
-});
-
-</script>
+    </script>
 
 </body>
+
 </html>
+```
