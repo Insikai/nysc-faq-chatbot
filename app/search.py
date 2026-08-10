@@ -19,11 +19,87 @@ class SearchEngine:
             self.df["Cleaned_Question"]
         )
 
+        self.intent_keywords = {
+            "Eligibility": {
+                "age",
+                "eligible",
+                "qualification",
+                "qualify",
+                "eligibility"
+            },
+
+            "Camp": {
+                "camp",
+                "documents",
+                "callup",
+                "call",
+                "photograph",
+                "medical"
+            },
+
+            "Relocation": {
+                "relocate",
+                "relocation",
+                "transfer",
+                "husband",
+                "state"
+            },
+
+            "Registration": {
+                "register",
+                "registration",
+                "dashboard",
+                "login",
+                "portal"
+            },
+
+            "Exclusion": {
+                "exemption",
+                "exempt",
+                "excluded"
+            },
+
+            "Office": {
+                "office",
+                "headquarters",
+                "address"
+            }
+        }
+
+
+    def detect_intent(self, question):
+
+        words = set(question.split())
+
+        scores = {}
+
+        for category, keywords in self.intent_keywords.items():
+
+            matches = words.intersection(keywords)
+
+            scores[category] = len(matches)
+
+        if not scores:
+            return None
+
+        best_category = max(
+            scores,
+            key=scores.get
+        )
+
+        if scores[best_category] == 0:
+            return None
+
+        return best_category
+
+
     def search(self, question):
 
         cleaned = self.preprocess(question)
 
-        user_vector = self.vectorizer.transform([cleaned])
+        user_vector = self.vectorizer.transform(
+            [cleaned]
+        )
 
         similarity = cosine_similarity(
             user_vector,
@@ -42,17 +118,43 @@ class SearchEngine:
                 keyword_scores.append(0.0)
                 continue
 
-            common_words = user_words.intersection(faq_words)
+            common_words = user_words.intersection(
+                faq_words
+            )
 
-            keyword_score = len(common_words) / len(user_words)
+            keyword_score = (
+                len(common_words) / len(user_words)
+            )
 
-            keyword_scores.append(keyword_score)
+            keyword_scores.append(
+                keyword_score
+            )
 
-        keyword_scores = np.array(keyword_scores)
+        keyword_scores = np.array(
+            keyword_scores
+        )
 
         final_scores = (
             0.7 * similarity
             + 0.3 * keyword_scores
+        )
+
+        intent = self.detect_intent(cleaned)
+
+        if intent:
+
+            for i, category in enumerate(
+                self.df["Category"]
+            ):
+
+                if category == intent:
+                    final_scores[i] += 0.10
+
+        # Keep scores between 0 and 1
+        final_scores = np.clip(
+            final_scores,
+            0.0,
+            1.0
         )
 
         top_matches = final_scores.argsort()[-3:][::-1]
