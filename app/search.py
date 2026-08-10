@@ -74,6 +74,7 @@ class SearchEngine:
             }
         }
 
+
     def detect_intent(self, question):
 
         words = set(question.split())
@@ -99,9 +100,26 @@ class SearchEngine:
 
         return best_category
 
-    def search(self, question):
 
-        cleaned = self.preprocess(question)
+    def search(self, question, previous_question=""):
+
+        # Combine the previous question with the current question
+        # when conversation context is available.
+        if previous_question:
+
+            combined_question = (
+                previous_question + " " + question
+            )
+
+        else:
+
+            combined_question = question
+
+
+        cleaned = self.preprocess(
+            combined_question
+        )
+
 
         user_vector = self.vectorizer.transform(
             [cleaned]
@@ -112,40 +130,56 @@ class SearchEngine:
             self.X
         )[0]
 
-        user_words = set(cleaned.split())
+
+        user_words = set(
+            cleaned.split()
+        )
 
         keyword_scores = []
 
+
         for faq_question in self.df["Cleaned_Question"]:
 
-            faq_words = set(faq_question.split())
+            faq_words = set(
+                faq_question.split()
+            )
 
             if not user_words:
+
                 keyword_scores.append(0.0)
+
                 continue
+
 
             common_words = user_words.intersection(
                 faq_words
             )
 
             keyword_score = (
-                len(common_words) / len(user_words)
+                len(common_words)
+                / len(user_words)
             )
 
             keyword_scores.append(
                 keyword_score
             )
 
+
         keyword_scores = np.array(
             keyword_scores
         )
+
 
         final_scores = (
             0.7 * similarity
             + 0.3 * keyword_scores
         )
 
-        intent = self.detect_intent(cleaned)
+
+        intent = self.detect_intent(
+            cleaned
+        )
+
 
         if intent:
 
@@ -154,7 +188,9 @@ class SearchEngine:
             ):
 
                 if category == intent:
+
                     final_scores[i] += 0.10
+
 
         final_scores = np.clip(
             final_scores,
@@ -162,11 +198,18 @@ class SearchEngine:
             1.0
         )
 
-        top_matches = final_scores.argsort()[-3:][::-1]
+
+        top_matches = (
+            final_scores
+            .argsort()[-3:][::-1]
+        )
 
         best_match = top_matches[0]
 
-        best_score = final_scores[best_match]
+        best_score = final_scores[
+            best_match
+        ]
+
 
         return (
             top_matches,

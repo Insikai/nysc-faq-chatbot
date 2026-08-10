@@ -31,16 +31,21 @@ def ask():
 
     question = data.get("question", "").strip()
 
+    previous_question = data.get(
+        "previous_question",
+        ""
+    ).strip()
+
     if not question:
         return jsonify({
             "error": "Please enter a question."
         }), 400
 
     top_matches, best_match, best_score, scores = search_engine.search(
-        question
-    )
+    question,
+    previous_question
+)
 
-    # Build unique suggestions
     matches = []
     seen_questions = set()
 
@@ -61,7 +66,6 @@ def ask():
         if len(matches) == 3:
             break
 
-    # Use the second unique suggestion for confidence
     if len(matches) > 1:
         second_best_score = matches[1]["score"]
     else:
@@ -69,9 +73,7 @@ def ask():
 
     confidence_gap = best_score - second_best_score
 
-    # Handle weak matches
     if best_score < 0.70:
-
         return jsonify({
             "answer": "I'm not confident enough about the answer. Please try one of the suggested questions.",
             "category": None,
@@ -79,9 +81,7 @@ def ask():
             "matches": matches
         })
 
-    # Handle ambiguous matches
     if confidence_gap < 0.10:
-
         return jsonify({
             "answer": "Your question could mean a few different things. Please choose one of the suggested questions.",
             "category": None,
