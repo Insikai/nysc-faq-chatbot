@@ -7,7 +7,6 @@ from app.search import SearchEngine
 
 app = Flask(__name__)
 
-
 df = load_dataset()
 
 df["Cleaned_Question"] = df["Question"].apply(
@@ -41,17 +40,40 @@ def ask():
         question
     )
 
+    # Build unique suggestions
     matches = []
+    seen_questions = set()
 
     for i in top_matches:
+
+        question_text = df.iloc[i]["Question"]
+
+        if question_text in seen_questions:
+            continue
+
+        seen_questions.add(question_text)
+
         matches.append({
-            "question": df.iloc[i]["Question"],
+            "question": question_text,
             "score": round(float(scores[i]), 2)
         })
 
-    if best_score < 0.70:
+        if len(matches) == 3:
+            break
+
+    # Use the second unique suggestion for confidence
+    if len(matches) > 1:
+        second_best_score = matches[1]["score"]
+    else:
+        second_best_score = 0.0
+
+    confidence_gap = best_score - second_best_score
+
+    # Reject weak or ambiguous matches
+    if best_score < 0.70 or confidence_gap < 0.10:
+
         return jsonify({
-            "answer": "Sorry, I don't have an exact answer. Please try one of the suggested questions.",
+            "answer": "I'm not confident enough about the answer. Please try one of the suggested questions.",
             "category": None,
             "score": round(float(best_score), 2),
             "matches": matches
