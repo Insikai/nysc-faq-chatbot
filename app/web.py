@@ -69,11 +69,21 @@ def ask():
 
     confidence_gap = best_score - second_best_score
 
-    # Reject weak or ambiguous matches
-    if best_score < 0.70 or confidence_gap < 0.10:
+    # Handle weak matches
+    if best_score < 0.70:
 
         return jsonify({
             "answer": "I'm not confident enough about the answer. Please try one of the suggested questions.",
+            "category": None,
+            "score": round(float(best_score), 2),
+            "matches": matches
+        })
+
+    # Handle ambiguous matches
+    if confidence_gap < 0.10:
+
+        return jsonify({
+            "answer": "Your question could mean a few different things. Please choose one of the suggested questions.",
             "category": None,
             "score": round(float(best_score), 2),
             "matches": matches
