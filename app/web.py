@@ -22,10 +22,6 @@ search_engine = SearchEngine(
 
 
 def is_follow_up(question):
-    """
-    Decide whether a question is likely to be a follow-up.
-    """
-
     cleaned = preprocess_text(question).strip()
 
     if not cleaned:
@@ -72,7 +68,6 @@ def is_follow_up(question):
         "with",
         "without"
     }:
-
         return True
 
     if len(words) <= 2:
@@ -103,10 +98,7 @@ def is_follow_up(question):
 
 @app.route("/")
 def home():
-
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
 @app.route("/ask", methods=["POST"])
@@ -124,6 +116,11 @@ def ask():
         ""
     ).strip()
 
+    conversation_history = data.get(
+        "conversation_history",
+        []
+    )
+
 
     if not question:
 
@@ -132,20 +129,38 @@ def ask():
         }), 400
 
 
+    if not isinstance(
+        conversation_history,
+        list
+    ):
+        conversation_history = []
+
+
+    conversation_history = [
+        str(item).strip()
+        for item in conversation_history
+        if str(item).strip()
+    ][-5:]
+
+
+    context_question = ""
+
+
     if previous_question and is_follow_up(question):
 
-        search_question = question
         context_question = previous_question
 
-    else:
+    elif (
+        conversation_history
+        and is_follow_up(question)
+    ):
 
-        search_question = question
-        context_question = ""
+        context_question = conversation_history[-1]
 
 
     top_matches, best_match, best_score, scores = (
         search_engine.search(
-            search_question,
+            question,
             context_question
         )
     )
@@ -160,15 +175,12 @@ def ask():
 
         question_text = df.iloc[i]["Question"]
 
-
         if question_text in seen_questions:
             continue
-
 
         seen_questions.add(
             question_text
         )
-
 
         matches.append({
             "question": question_text,
@@ -178,23 +190,19 @@ def ask():
             )
         })
 
-
         if len(matches) == 3:
             break
 
 
     if len(matches) > 1:
-
         second_best_score = matches[1]["score"]
-
     else:
-
         second_best_score = 0.0
 
 
     confidence_gap = (
-        best_score
-        - second_best_score
+        best_score -
+        second_best_score
     )
 
 
@@ -240,12 +248,15 @@ def ask():
             float(best_score),
             2
         ),
-        "matches": matches
+        "matches": matches,
+        "conversation_context": {
+            "last_question": question,
+            "history_length": len(
+                conversation_history
+            )
+        }
     })
 
 
 if __name__ == "__main__":
-
-    app.run(
-        debug=True
-    )
+    app.run(debug=True)
