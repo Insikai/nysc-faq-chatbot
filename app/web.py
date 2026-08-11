@@ -7,11 +7,13 @@ from app.search import SearchEngine
 
 app = Flask(__name__)
 
+
 df = load_dataset()
 
 df["Cleaned_Question"] = df["Question"].apply(
     preprocess_text
 )
+
 
 search_engine = SearchEngine(
     df,
@@ -19,9 +21,92 @@ search_engine = SearchEngine(
 )
 
 
+def is_follow_up(question):
+    """
+    Decide whether a question is likely to be a follow-up.
+    """
+
+    cleaned = preprocess_text(question).strip()
+
+    if not cleaned:
+        return False
+
+    words = cleaned.split()
+
+    follow_up_phrases = {
+        "what about",
+        "how about",
+        "which one",
+        "which ones",
+        "another state",
+        "to another state",
+        "that state",
+        "the other one",
+        "the other",
+        "documents",
+        "document",
+        "requirements",
+        "requirement",
+        "photos",
+        "photographs",
+        "medical documents",
+        "medical certificate"
+    }
+
+    for phrase in follow_up_phrases:
+
+        if cleaned == phrase:
+            return True
+
+        if cleaned.startswith(phrase + " "):
+            return True
+
+    if words[0] in {
+        "to",
+        "for",
+        "about",
+        "after",
+        "before",
+        "during",
+        "from",
+        "with",
+        "without"
+    }:
+
+        return True
+
+    if len(words) <= 2:
+
+        question_starters = {
+            "can",
+            "could",
+            "would",
+            "should",
+            "will",
+            "what",
+            "where",
+            "when",
+            "who",
+            "how",
+            "why",
+            "is",
+            "are",
+            "do",
+            "does"
+        }
+
+        if words[0] not in question_starters:
+            return True
+
+    return False
+
+
 @app.route("/")
 def home():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html"
+    )
 
 
 @app.route("/ask", methods=["POST"])
@@ -29,73 +114,138 @@ def ask():
 
     data = request.get_json()
 
-    question = data.get("question", "").strip()
+    question = data.get(
+        "question",
+        ""
+    ).strip()
 
     previous_question = data.get(
         "previous_question",
         ""
     ).strip()
 
+
     if not question:
+
         return jsonify({
             "error": "Please enter a question."
         }), 400
 
-    top_matches, best_match, best_score, scores = search_engine.search(
-    question,
-    previous_question
-)
+
+    if previous_question and is_follow_up(question):
+
+        search_question = question
+        context_question = previous_question
+
+    else:
+
+        search_question = question
+        context_question = ""
+
+
+    top_matches, best_match, best_score, scores = (
+        search_engine.search(
+            search_question,
+            context_question
+        )
+    )
+
 
     matches = []
+
     seen_questions = set()
+
 
     for i in top_matches:
 
         question_text = df.iloc[i]["Question"]
 
+
         if question_text in seen_questions:
             continue
 
-        seen_questions.add(question_text)
+
+        seen_questions.add(
+            question_text
+        )
+
 
         matches.append({
             "question": question_text,
-            "score": round(float(scores[i]), 2)
+            "score": round(
+                float(scores[i]),
+                2
+            )
         })
+
 
         if len(matches) == 3:
             break
 
+
     if len(matches) > 1:
+
         second_best_score = matches[1]["score"]
+
     else:
+
         second_best_score = 0.0
 
-    confidence_gap = best_score - second_best_score
+
+    confidence_gap = (
+        best_score
+        - second_best_score
+    )
+
 
     if best_score < 0.70:
+
         return jsonify({
-            "answer": "I'm not confident enough about the answer. Please try one of the suggested questions.",
+            "answer": (
+                "I'm not confident enough "
+                "about the answer. Please try "
+                "one of the suggested questions."
+            ),
             "category": None,
-            "score": round(float(best_score), 2),
+            "score": round(
+                float(best_score),
+                2
+            ),
             "matches": matches
         })
 
+
     if confidence_gap < 0.10:
+
         return jsonify({
-            "answer": "Your question could mean a few different things. Please choose one of the suggested questions.",
+            "answer": (
+                "Your question could mean "
+                "a few different things. "
+                "Please choose one of the "
+                "suggested questions."
+            ),
             "category": None,
-            "score": round(float(best_score), 2),
+            "score": round(
+                float(best_score),
+                2
+            ),
             "matches": matches
         })
+
 
     return jsonify({
         "answer": df.iloc[best_match]["Answer"],
         "category": df.iloc[best_match]["Category"],
-        "score": round(float(best_score), 2),
+        "score": round(
+            float(best_score),
+            2
+        ),
         "matches": matches
     })
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    app.run(
+        debug=True
+    )
