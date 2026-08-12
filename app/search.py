@@ -19,6 +19,46 @@ class SearchEngine:
             self.df["Cleaned_Question"]
         )
 
+        self.keyword_synonyms = {
+            "photo": {
+                "photograph",
+                "photographs",
+                "photos",
+                "passport"
+            },
+
+            "photos": {
+                "photograph",
+                "photographs",
+                "photo",
+                "passport"
+            },
+
+            "photograph": {
+                "photo",
+                "photographs",
+                "photos",
+                "passport"
+            },
+
+            "photographs": {
+                "photo",
+                "photograph",
+                "photos",
+                "passport"
+            },
+
+            "medical": {
+                "certificate",
+                "documents"
+            },
+
+            "documents": {
+                "document",
+                "requirements"
+            }
+        }
+
         self.intent_keywords = {
 
             "Eligibility": {
@@ -35,7 +75,8 @@ class SearchEngine:
                 "callup",
                 "call",
                 "photograph",
-                "medical"
+                "medical",
+                "passport"
             },
 
             "Relocation": {
@@ -77,15 +118,21 @@ class SearchEngine:
 
     def detect_intent(self, question):
 
-        words = set(question.split())
+        words = set(
+            question.split()
+        )
 
         scores = {}
 
         for category, keywords in self.intent_keywords.items():
 
-            matches = words.intersection(keywords)
+            matches = words.intersection(
+                keywords
+            )
 
-            scores[category] = len(matches)
+            scores[category] = len(
+                matches
+            )
 
         if not scores:
             return None
@@ -101,17 +148,18 @@ class SearchEngine:
         return best_category
 
 
-    def search(self, question, previous_question=""):
-
-        # Use the current question as the main search query.
-        # Add the previous question as conversational context.
+    def search(
+        self,
+        question,
+        previous_question=""
+    ):
 
         if previous_question:
 
             combined_question = (
-                previous_question + " " +
-                question + " " +
                 previous_question
+                + " "
+                + question
             )
 
         else:
@@ -140,31 +188,51 @@ class SearchEngine:
         )
 
 
+        expanded_words = set(
+            user_words
+        )
+
+
+        for word in user_words:
+
+            if word in self.keyword_synonyms:
+
+                expanded_words.update(
+                    self.keyword_synonyms[word]
+                )
+
+
         keyword_scores = []
 
 
-        for faq_question in self.df["Cleaned_Question"]:
+        for faq_question in self.df[
+            "Cleaned_Question"
+        ]:
 
             faq_words = set(
                 faq_question.split()
             )
 
 
-            if not user_words:
+            if not expanded_words:
 
-                keyword_scores.append(0.0)
+                keyword_scores.append(
+                    0.0
+                )
 
                 continue
 
 
-            common_words = user_words.intersection(
-                faq_words
+            common_words = (
+                expanded_words.intersection(
+                    faq_words
+                )
             )
 
 
             keyword_score = (
                 len(common_words)
-                / len(user_words)
+                / len(expanded_words)
             )
 
 

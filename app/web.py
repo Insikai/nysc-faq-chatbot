@@ -8,6 +8,7 @@ from app.search import SearchEngine
 app = Flask(__name__)
 
 
+# Load FAQ dataset
 df = load_dataset()
 
 df["Cleaned_Question"] = df["Question"].apply(
@@ -15,6 +16,7 @@ df["Cleaned_Question"] = df["Question"].apply(
 )
 
 
+# Create search engine
 search_engine = SearchEngine(
     df,
     preprocess_text
@@ -22,6 +24,10 @@ search_engine = SearchEngine(
 
 
 def is_follow_up(question):
+    """
+    Decide whether a question is likely to be a follow-up.
+    """
+
     cleaned = preprocess_text(question).strip()
 
     if not cleaned:
@@ -98,7 +104,10 @@ def is_follow_up(question):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+
+    return render_template(
+        "index.html"
+    )
 
 
 @app.route("/ask", methods=["POST"])
@@ -106,15 +115,23 @@ def ask():
 
     data = request.get_json()
 
+    if not data:
+        return jsonify({
+            "error": "Invalid JSON request."
+        }), 400
+
+
     question = data.get(
         "question",
         ""
     ).strip()
 
+
     previous_question = data.get(
         "previous_question",
         ""
     ).strip()
+
 
     conversation_history = data.get(
         "conversation_history",
@@ -129,13 +146,16 @@ def ask():
         }), 400
 
 
+    # Make sure conversation history is a list
     if not isinstance(
         conversation_history,
         list
     ):
+
         conversation_history = []
 
 
+    # Keep only the last five questions
     conversation_history = [
         str(item).strip()
         for item in conversation_history
@@ -146,18 +166,54 @@ def ask():
     context_question = ""
 
 
-    if previous_question and is_follow_up(question):
-
-        context_question = previous_question
-
-    elif (
-        conversation_history
-        and is_follow_up(question)
-    ):
-
-        context_question = conversation_history[-1]
+    # Determine whether the current question
+    # contains a clear new topic.
+    cleaned_question = preprocess_text(
+        question
+    ).lower().strip()
 
 
+    meaningful_keywords = {
+        "photograph",
+        "photographs",
+        "photo",
+        "photos",
+        "medical",
+        "documents",
+        "document",
+        "relocate",
+        "relocation",
+        "state",
+        "husband",
+        "wife",
+        "camp"
+    }
+
+
+    has_new_keyword = any(
+        keyword in cleaned_question
+        for keyword in meaningful_keywords
+    )
+
+
+    # Only use previous context when the
+    # current question is genuinely vague.
+    if is_follow_up(question):
+
+        if not has_new_keyword:
+
+            if previous_question:
+
+                context_question = previous_question
+
+            elif conversation_history:
+
+                context_question = (
+                    conversation_history[-1]
+                )
+
+
+    # Search
     top_matches, best_match, best_score, scores = (
         search_engine.search(
             question,
@@ -166,6 +222,7 @@ def ask():
     )
 
 
+    # Build unique suggestions
     matches = []
 
     seen_questions = set()
@@ -175,12 +232,15 @@ def ask():
 
         question_text = df.iloc[i]["Question"]
 
+
         if question_text in seen_questions:
             continue
+
 
         seen_questions.add(
             question_text
         )
+
 
         matches.append({
             "question": question_text,
@@ -190,73 +250,115 @@ def ask():
             )
         })
 
+
         if len(matches) == 3:
             break
 
 
+    # Calculate confidence gap
     if len(matches) > 1:
+
         second_best_score = matches[1]["score"]
+
     else:
+
         second_best_score = 0.0
 
 
     confidence_gap = (
-        best_score -
-        second_best_score
+        best_score
+        - second_best_score
     )
 
 
-    if best_score < 0.70:
-
+    if best_score < 0.70 and confidence_gap < 0.15:
         return jsonify({
+
             "answer": (
                 "I'm not confident enough "
                 "about the answer. Please try "
                 "one of the suggested questions."
             ),
+
             "category": None,
+
             "score": round(
                 float(best_score),
                 2
             ),
-            "matches": matches
+
+            "matches": matches,
+
+            "conversation_context": {
+                "last_question": question,
+                "history_length": len(
+                    conversation_history
+                )
+            }
+
         })
 
 
-    if confidence_gap < 0.10:
+
+    if (
+        confidence_gap < 0.10
+        and best_score < 0.90
+    ):
 
         return jsonify({
+
             "answer": (
                 "Your question could mean "
                 "a few different things. "
                 "Please choose one of the "
                 "suggested questions."
             ),
+
             "category": None,
+
             "score": round(
                 float(best_score),
                 2
             ),
-            "matches": matches
+
+            "matches": matches,
+
+            "conversation_context": {
+                "last_question": question,
+                "history_length": len(
+                    conversation_history
+                )
+            }
+
         })
 
 
+    # Successful answer
     return jsonify({
+
         "answer": df.iloc[best_match]["Answer"],
+
         "category": df.iloc[best_match]["Category"],
+
         "score": round(
             float(best_score),
             2
         ),
+
         "matches": matches,
+
         "conversation_context": {
             "last_question": question,
             "history_length": len(
                 conversation_history
             )
         }
+
     })
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    app.run(
+        debug=True
+    )
