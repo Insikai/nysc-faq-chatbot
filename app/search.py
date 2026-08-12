@@ -148,13 +148,73 @@ class SearchEngine:
         return best_category
 
 
+    def is_contextual_follow_up(self, question):
+
+        follow_up_phrases = [
+            "what about",
+            "how about",
+            "what are the requirements",
+            "what are the requirements for",
+            "what documents",
+            "which documents",
+            "what about the requirements",
+            "and what about",
+            "what else",
+            "how much",
+            "how long",
+            "where can i",
+            "when can i"
+        ]
+        for phrase in follow_up_phrases:
+
+            if cleaned_question.startswith(phrase):
+
+                return True
+
+        return False
+
+
     def search(
         self,
         question,
         previous_question=""
     ):
 
-        if previous_question:
+        if (
+            previous_question
+            and self.is_contextual_follow_up(question)
+        ):
+
+            combined_question = (
+                previous_question
+                + " "
+                + question
+            )
+
+        else:
+
+            combined_question = question
+
+
+        cleaned = self.preprocess(
+            combined_question
+        )
+
+
+        user_vector = self.vectorizer.transform(
+            [cleaned]
+        )
+
+
+        similarity = cosine_similarity(
+            user_vector,
+            self.X
+        )[0]
+
+        if (
+            previous_question
+            and self.is_contextual_follow_up(question)
+        ):
 
             combined_question = (
                 previous_question
