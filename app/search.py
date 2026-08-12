@@ -109,7 +109,7 @@ class SearchEngine:
         if previous_question:
 
             combined_question = (
-                question + " " +
+                previous_question + " " +
                 question + " " +
                 previous_question
             )
