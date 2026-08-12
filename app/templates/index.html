@@ -263,11 +263,25 @@
         document.getElementById("askButton");
 
 
-    let previousQuestion = "";
+  let previousQuestion =
+    localStorage.getItem("nysc_previous_question") || "";
 
-    let conversationHistory = [];
+let conversationHistory = [];
 
+try {
+    conversationHistory = JSON.parse(
+        localStorage.getItem("nysc_conversation_history") || "[]"
+    );
 
+    if (!Array.isArray(conversationHistory)) {
+        conversationHistory = [];
+    }
+
+} catch (error) {
+    conversationHistory = [];
+}
+console.log("Previous question:", previousQuestion);
+console.log("Conversation history:", conversationHistory);
     function escapeHtml(text) {
 
         const div = document.createElement("div");
@@ -380,7 +394,11 @@
                             previousQuestion,
 
                         conversation_history:
-                            conversationHistory
+    conversationHistory.map(
+        function(item) {
+            return item.question;
+        }
+    )
 
                     })
 
@@ -500,23 +518,28 @@
             );
 
 
-            previousQuestion =
-                question;
+            previousQuestion = question;
 
+conversationHistory.push({
+    question: question,
+    answer: data.answer || "",
+    category: data.category || null
+});
 
-            conversationHistory.push(
-                question
-            );
+if (conversationHistory.length > 5) {
+    conversationHistory =
+        conversationHistory.slice(-5);
+}
 
+localStorage.setItem(
+    "nysc_previous_question",
+    previousQuestion
+);
 
-            if (
-                conversationHistory.length > 5
-            ) {
-
-                conversationHistory =
-                    conversationHistory.slice(-5);
-
-            }
+localStorage.setItem(
+    "nysc_conversation_history",
+    JSON.stringify(conversationHistory)
+);
 
 
         } catch (error) {

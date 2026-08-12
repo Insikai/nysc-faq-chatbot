@@ -103,12 +103,15 @@ class SearchEngine:
 
     def search(self, question, previous_question=""):
 
-        # Combine the previous question with the current question
-        # when conversation context is available.
+        # Use the current question as the main search query.
+        # Add the previous question as conversational context.
+
         if previous_question:
 
             combined_question = (
-                previous_question + " " + question
+                question + " " +
+                question + " " +
+                previous_question
             )
 
         else:
@@ -125,6 +128,7 @@ class SearchEngine:
             [cleaned]
         )
 
+
         similarity = cosine_similarity(
             user_vector,
             self.X
@@ -135,6 +139,7 @@ class SearchEngine:
             cleaned.split()
         )
 
+
         keyword_scores = []
 
 
@@ -143,6 +148,7 @@ class SearchEngine:
             faq_words = set(
                 faq_question.split()
             )
+
 
             if not user_words:
 
@@ -155,10 +161,12 @@ class SearchEngine:
                 faq_words
             )
 
+
             keyword_score = (
                 len(common_words)
                 / len(user_words)
             )
+
 
             keyword_scores.append(
                 keyword_score
@@ -204,7 +212,9 @@ class SearchEngine:
             .argsort()[-3:][::-1]
         )
 
+
         best_match = top_matches[0]
+
 
         best_score = final_scores[
             best_match
