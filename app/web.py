@@ -8,15 +8,12 @@ from app.search import SearchEngine
 app = Flask(__name__)
 
 
-# Load FAQ dataset
 df = load_dataset()
 
 df["Cleaned_Question"] = df["Question"].apply(
     preprocess_text
 )
 
-
-# Create search engine
 search_engine = SearchEngine(
     df,
     preprocess_text
@@ -146,7 +143,6 @@ def ask():
         }), 400
 
 
-    # Make sure conversation history is a list
     if not isinstance(
         conversation_history,
         list
@@ -155,7 +151,6 @@ def ask():
         conversation_history = []
 
 
-    # Keep only the last five questions
     conversation_history = [
         str(item).strip()
         for item in conversation_history
@@ -166,8 +161,6 @@ def ask():
     context_question = ""
 
 
-    # Determine whether the current question
-    # contains a clear new topic.
     cleaned_question = preprocess_text(
         question
     ).lower().strip()
@@ -196,8 +189,6 @@ def ask():
     )
 
 
-    # Only use previous context when the
-    # current question is genuinely vague.
     if is_follow_up(question):
 
         if not has_new_keyword:
@@ -213,7 +204,7 @@ def ask():
                 )
 
 
-    # Search
+
     top_matches, best_match, best_score, scores = (
         search_engine.search(
             question,
@@ -222,7 +213,6 @@ def ask():
     )
 
 
-    # Build unique suggestions
     matches = []
 
     seen_questions = set()
@@ -255,7 +245,6 @@ def ask():
             break
 
 
-    # Calculate confidence gap
     if len(matches) > 1:
 
         second_best_score = matches[1]["score"]
@@ -333,7 +322,6 @@ def ask():
         })
 
 
-    # Successful answer
     return jsonify({
 
         "answer": df.iloc[best_match]["Answer"],
