@@ -20,6 +20,7 @@ class SearchEngine:
         )
 
         self.keyword_synonyms = {
+
             "photo": {
                 "photograph",
                 "photographs",
@@ -48,26 +49,99 @@ class SearchEngine:
                 "passport"
             },
 
+            "passport": {
+                "photo",
+                "photograph",
+                "photographs",
+                "photos"
+            },
+
             "medical": {
                 "certificate",
+                "documents",
+                "health",
+                "healthcare"
+            },
+
+            "certificate": {
+                "medical",
                 "documents"
             },
 
             "documents": {
                 "document",
-                "requirements"
+                "requirements",
+                "papers"
+            },
+
+            "document": {
+                "documents",
+                "requirements",
+                "papers"
+            },
+
+            "requirements": {
+                "required",
+                "documents",
+                "document"
+            },
+
+            "husband": {
+                "spouse",
+                "partner"
+            },
+
+            "wife": {
+                "spouse",
+                "partner"
+            },
+
+            "spouse": {
+                "husband",
+                "wife",
+                "partner"
+            },
+
+            "partner": {
+                "husband",
+                "wife",
+                "spouse"
+            },
+
+            "relocate": {
+                "relocation",
+                "transfer",
+                "move"
+            },
+
+            "relocation": {
+                "relocate",
+                "transfer",
+                "move"
+            },
+
+            "transfer": {
+                "relocate",
+                "relocation",
+                "move"
+            },
+
+            "move": {
+                "relocate",
+                "relocation",
+                "transfer"
             }
         }
-
         self.intent_keywords = {
 
-            "Eligibility": {
-                "age",
-                "eligible",
-                "qualification",
-                "qualify",
-                "eligibility"
-            },
+        "Eligibility": {
+    "age",
+    "eligible",
+    "qualified",
+    "qualification",
+    "qualify",
+    "eligibility"
+},
 
             "Camp": {
                 "camp",
@@ -79,13 +153,18 @@ class SearchEngine:
                 "passport"
             },
 
-            "Relocation": {
-                "relocate",
-                "relocation",
-                "transfer",
-                "husband",
-                "state"
-            },
+        "Relocation": {
+    "relocate",
+    "relocation",
+    "transfer",
+    "husband",
+    "wife",
+    "spouse",
+    "partner",
+    "state",
+    "move",
+    "service"
+},
 
             "Registration": {
                 "register",
@@ -115,18 +194,28 @@ class SearchEngine:
             }
         }
 
-
     def detect_intent(self, question):
-
         words = set(
             question.split()
         )
+
+        expanded_words = set(
+            words
+        )
+
+        for word in words:
+
+            if word in self.keyword_synonyms:
+
+                expanded_words.update(
+                    self.keyword_synonyms[word]
+                )
 
         scores = {}
 
         for category, keywords in self.intent_keywords.items():
 
-            matches = words.intersection(
+            matches = expanded_words.intersection(
                 keywords
             )
 
@@ -146,37 +235,6 @@ class SearchEngine:
             return None
 
         return best_category
-
-    def is_contextual_follow_up(self, question):
-
-        follow_up_phrases = [
-            "what about",
-            "what of",
-            "how about",
-            "and what about",
-            "and what of",
-            "what else",
-            "how about that",
-            "what then",
-            "and the",
-            "and what",
-            "when can i"
-        ]
-
-        cleaned_question = (
-            question.lower().strip()
-        )
-
-        for phrase in follow_up_phrases:
-
-            if cleaned_question.startswith(
-                phrase
-            ):
-
-                return True
-
-        return False
-
     def search(
         self,
         question,
@@ -292,11 +350,9 @@ class SearchEngine:
 
             final_scores += 0.10
 
-
         intent = self.detect_intent(
-            cleaned
+            self.preprocess(question)
         )
-
 
         if intent:
 
@@ -306,7 +362,7 @@ class SearchEngine:
 
                 if category == intent:
 
-                    final_scores[i] += 0.10
+                    final_scores[i] += 0.50
 
 
         final_scores = np.clip(

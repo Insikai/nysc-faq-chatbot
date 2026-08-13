@@ -257,10 +257,16 @@ def ask():
         - second_best_score
     )
 
+    intent = search_engine.detect_intent(
+        preprocess_text(question)
+    )
 
-    if best_score < 0.70 and confidence_gap < 0.15:
+    if (
+        best_score < 0.70
+        and confidence_gap < 0.15
+        and intent is None
+    ):
         return jsonify({
-
             "answer": (
                 "I'm not confident enough "
                 "about the answer. Please try "
@@ -288,9 +294,10 @@ def ask():
 
 
     if (
-        confidence_gap < 0.10
-        and best_score < 0.90
-    ):
+    confidence_gap < 0.10
+    and best_score < 0.90
+    and intent is None
+):
 
         return jsonify({
 
