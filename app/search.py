@@ -147,32 +147,35 @@ class SearchEngine:
 
         return best_category
 
-
     def is_contextual_follow_up(self, question):
 
         follow_up_phrases = [
             "what about",
+            "what of",
             "how about",
-            "what are the requirements",
-            "what are the requirements for",
-            "what documents",
-            "which documents",
-            "what about the requirements",
             "and what about",
+            "and what of",
             "what else",
-            "how much",
-            "how long",
-            "where can i",
+            "how about that",
+            "what then",
+            "and the",
+            "and what",
             "when can i"
         ]
+
+        cleaned_question = (
+            question.lower().strip()
+        )
+
         for phrase in follow_up_phrases:
 
-            if cleaned_question.startswith(phrase):
+            if cleaned_question.startswith(
+                phrase
+            ):
 
                 return True
 
         return False
-
 
     def search(
         self,
@@ -180,36 +183,8 @@ class SearchEngine:
         previous_question=""
     ):
 
-        if (
-            previous_question
-            and self.is_contextual_follow_up(question)
-        ):
-
-            combined_question = (
-                previous_question
-                + " "
-                + question
-            )
-
-        else:
-
-            combined_question = question
 
 
-        cleaned = self.preprocess(
-            combined_question
-        )
-
-
-        user_vector = self.vectorizer.transform(
-            [cleaned]
-        )
-
-
-        similarity = cosine_similarity(
-            user_vector,
-            self.X
-        )[0]
 
         if (
             previous_question
@@ -305,11 +280,17 @@ class SearchEngine:
             keyword_scores
         )
 
-
         final_scores = (
             0.7 * similarity
             + 0.3 * keyword_scores
         )
+
+        if (
+            previous_question
+            and self.is_contextual_follow_up(question)
+        ):
+
+            final_scores += 0.10
 
 
         intent = self.detect_intent(

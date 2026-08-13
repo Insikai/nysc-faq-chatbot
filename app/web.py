@@ -189,19 +189,17 @@ def ask():
     )
 
 
+    context_question = ""
+
     if is_follow_up(question):
 
-        if not has_new_keyword:
+        if previous_question:
 
-            if previous_question:
+            context_question = previous_question
 
-                context_question = previous_question
+        elif conversation_history:
 
-            elif conversation_history:
-
-                context_question = (
-                    conversation_history[-1]
-                )
+            context_question = conversation_history[-1]
 
 
 
