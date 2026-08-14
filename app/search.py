@@ -235,104 +235,110 @@ class SearchEngine:
             return None
 
         return best_category
+    def is_contextual_follow_up(self, question):
+
+        follow_up_phrases = [
+            "what about",
+            "what of",
+            "how about",
+            "and what about",
+            "and what of",
+            "what else",
+            "how about that",
+            "what then",
+            "and the",
+            "and what",
+            "when can i"
+        ]
+
+        cleaned_question = question.lower().strip()
+
+        for phrase in follow_up_phrases:
+            if cleaned_question.startswith(phrase):
+                return True
+
+        return False
+
     def search(
         self,
         question,
         previous_question=""
     ):
 
-
-
-
-        if (
+        is_follow_up = (
             previous_question
             and self.is_contextual_follow_up(question)
-        ):
-
-            combined_question = (
-                previous_question
-                + " "
-                + question
-            )
-
-        else:
-
-            combined_question = question
-
-
-        cleaned = self.preprocess(
-            combined_question
         )
 
+        cleaned = self.preprocess(question)
 
         user_vector = self.vectorizer.transform(
             [cleaned]
         )
-
 
         similarity = cosine_similarity(
             user_vector,
             self.X
         )[0]
 
+        if is_follow_up:
+            context_cleaned = self.preprocess(
+                previous_question
+            )
+
+            context_vector = self.vectorizer.transform(
+                [context_cleaned]
+            )
+
+            context_similarity = cosine_similarity(
+                context_vector,
+                self.X
+            )[0]
+
+            similarity = (
+                0.7 * similarity
+                + 0.3 * context_similarity
+            )
 
         user_words = set(
             cleaned.split()
         )
 
-
         expanded_words = set(
             user_words
         )
 
-
         for word in user_words:
-
             if word in self.keyword_synonyms:
-
                 expanded_words.update(
                     self.keyword_synonyms[word]
                 )
 
-
         keyword_scores = []
-
 
         for faq_question in self.df[
             "Cleaned_Question"
         ]:
-
             faq_words = set(
                 faq_question.split()
             )
 
-
             if not expanded_words:
-
-                keyword_scores.append(
-                    0.0
-                )
-
+                keyword_scores.append(0.0)
                 continue
 
-
-            common_words = (
-                expanded_words.intersection(
-                    faq_words
-                )
+            common_words = expanded_words.intersection(
+                faq_words
             )
-
 
             keyword_score = (
                 len(common_words)
                 / len(expanded_words)
             )
 
-
             keyword_scores.append(
                 keyword_score
             )
-
 
         keyword_scores = np.array(
             keyword_scores
@@ -347,7 +353,6 @@ class SearchEngine:
             previous_question
             and self.is_contextual_follow_up(question)
         ):
-
             final_scores += 0.10
 
         intent = self.detect_intent(
@@ -355,15 +360,11 @@ class SearchEngine:
         )
 
         if intent:
-
             for i, category in enumerate(
                 self.df["Category"]
             ):
-
                 if category == intent:
-
                     final_scores[i] += 0.50
-
 
         final_scores = np.clip(
             final_scores,
@@ -371,20 +372,16 @@ class SearchEngine:
             1.0
         )
 
-
         top_matches = (
             final_scores
             .argsort()[-3:][::-1]
         )
 
-
         best_match = top_matches[0]
-
 
         best_score = final_scores[
             best_match
         ]
-
 
         return (
             top_matches,
