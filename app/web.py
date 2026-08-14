@@ -163,38 +163,6 @@ def ask():
         if str(item).strip()
     ][-5:]
 
-
-    context_question = ""
-
-
-    cleaned_question = preprocess_text(
-        question
-    ).lower().strip()
-
-
-    meaningful_keywords = {
-        "photograph",
-        "photographs",
-        "photo",
-        "photos",
-        "medical",
-        "documents",
-        "document",
-        "relocate",
-        "relocation",
-        "state",
-        "husband",
-        "wife",
-        "camp"
-    }
-
-
-    has_new_keyword = any(
-        keyword in cleaned_question
-        for keyword in meaningful_keywords
-    )
-
-
     context_question = ""
 
     if is_follow_up(question):
@@ -206,7 +174,6 @@ def ask():
         elif conversation_history:
 
             context_question = conversation_history[-1]
-
 
     print("QUESTION:", question)
     print("PREVIOUS QUESTION:", previous_question)

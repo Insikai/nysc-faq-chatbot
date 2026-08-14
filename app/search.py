@@ -342,10 +342,9 @@ class SearchEngine:
             )[0]
 
             similarity = (
-                0.7 * similarity
-                + 0.3 * context_similarity
-            )
-
+    0.7 * similarity
+    + 0.3 * context_similarity
+)
         user_words = set(
             cleaned.split()
         )
@@ -400,6 +399,17 @@ class SearchEngine:
             and self.is_contextual_follow_up(question)
         )
 
+        current_intent = self.detect_intent(
+            cleaned
+        )
+
+        previous_intent = None
+
+        if previous_question:
+            previous_intent = self.detect_intent(
+                self.preprocess(previous_question)
+            )
+
         if is_contextual_intent and previous_question:
             intent = self.detect_intent(
                 self.preprocess(previous_question)
@@ -415,16 +425,17 @@ class SearchEngine:
             ):
 
                 if category == intent:
+
                     if is_contextual_intent:
-                        final_scores[i] += 0.20
+                        final_scores[i] += 0.35
                     else:
                         final_scores[i] += 0.10
 
-            final_scores = np.clip(
-                final_scores,
-                0.0,
-                1.0
-            )
+                    final_scores = np.clip(
+                        final_scores,
+                        0.0,
+                        1.0
+                    )
 
         top_matches = (
             final_scores
