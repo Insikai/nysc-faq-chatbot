@@ -287,6 +287,37 @@ class SearchEngine:
 
         cleaned = self.preprocess(question)
 
+        exact_matches = self.df[
+            self.df["Cleaned_Question"] == cleaned
+        ].index.tolist()
+
+        if exact_matches:
+            best_match = exact_matches[0]
+
+            top_matches = [
+                best_match
+            ]
+
+            for i in self.df.index:
+                if i != best_match:
+                    top_matches.append(i)
+
+                if len(top_matches) == 3:
+                    break
+
+            scores = np.zeros(
+                len(self.df)
+            )
+
+            scores[best_match] = 1.0
+
+            return (
+                top_matches,
+                best_match,
+                1.0,
+                scores
+            )
+
         user_vector = self.vectorizer.transform(
             [cleaned]
         )
@@ -388,11 +419,12 @@ class SearchEngine:
                         final_scores[i] += 0.20
                     else:
                         final_scores[i] += 0.10
-                        final_scores = np.clip(
-    final_scores,
-    0.0,
-    1.0
-)
+
+            final_scores = np.clip(
+                final_scores,
+                0.0,
+                1.0
+            )
 
         top_matches = (
             final_scores
