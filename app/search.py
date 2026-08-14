@@ -399,43 +399,39 @@ class SearchEngine:
             and self.is_contextual_follow_up(question)
         )
 
-        current_intent = self.detect_intent(
-            cleaned
-        )
-
-        previous_intent = None
-
-        if previous_question:
-            previous_intent = self.detect_intent(
-                self.preprocess(previous_question)
-            )
-
         if is_contextual_intent and previous_question:
             intent = self.detect_intent(
                 self.preprocess(previous_question)
             )
+            context_category = intent
         else:
             intent = self.detect_intent(
                 cleaned
             )
+            context_category = None
+
+        if context_category:
+            for i, category in enumerate(
+                self.df["Category"]
+            ):
+                if category == context_category:
+                    final_scores[i] += 0.15
 
         if intent:
             for i, category in enumerate(
                 self.df["Category"]
             ):
-
                 if category == intent:
-
                     if is_contextual_intent:
                         final_scores[i] += 0.35
                     else:
                         final_scores[i] += 0.10
 
-                    final_scores = np.clip(
-                        final_scores,
-                        0.0,
-                        1.0
-                    )
+        final_scores = np.clip(
+            final_scores,
+            0.0,
+            1.0
+        )
 
         top_matches = (
             final_scores
@@ -443,7 +439,10 @@ class SearchEngine:
         )
 
         best_match = top_matches[0]
-        best_score = final_scores[best_match]
+
+        best_score = final_scores[
+            best_match
+        ]
 
         return (
             top_matches,
