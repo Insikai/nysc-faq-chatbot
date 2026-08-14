@@ -133,16 +133,14 @@ class SearchEngine:
             }
         }
         self.intent_keywords = {
-
-        "Eligibility": {
-    "age",
-    "eligible",
-    "qualified",
-    "qualification",
-    "qualify",
-    "eligibility"
-},
-
+            "Eligibility": {
+                "age",
+                "eligible",
+                "qualified",
+                "qualification",
+                "qualify",
+                "eligibility"
+            },
             "Camp": {
                 "camp",
                 "documents",
@@ -152,20 +150,18 @@ class SearchEngine:
                 "medical",
                 "passport"
             },
-
-        "Relocation": {
-    "relocate",
-    "relocation",
-    "transfer",
-    "husband",
-    "wife",
-    "spouse",
-    "partner",
-    "state",
-    "move",
-    "service"
-},
-
+            "Relocation": {
+                "relocate",
+                "relocation",
+                "transfer",
+                "husband",
+                "wife",
+                "spouse",
+                "partner",
+                "state",
+                "move",
+                "service"
+            },
             "Registration": {
                 "register",
                 "registration",
@@ -173,7 +169,6 @@ class SearchEngine:
                 "login",
                 "portal"
             },
-
             "Exclusion": {
                 "exemption",
                 "exempt",
@@ -183,7 +178,6 @@ class SearchEngine:
                 "required",
                 "serve"
             },
-
             "Office": {
                 "office",
                 "headquarters",
@@ -194,7 +188,24 @@ class SearchEngine:
             }
         }
 
-    def detect_intent(self, question):
+    def detect_intent(
+        self,
+        question,
+        previous_question=""
+    ):
+
+        if (
+            previous_question
+            and self.is_contextual_follow_up(question)
+        ):
+
+            previous_intent = self.detect_intent(
+                previous_question
+            )
+
+            if previous_intent:
+                return previous_intent
+
         words = set(
             question.split()
         )
@@ -204,9 +215,7 @@ class SearchEngine:
         )
 
         for word in words:
-
             if word in self.keyword_synonyms:
-
                 expanded_words.update(
                     self.keyword_synonyms[word]
                 )
@@ -214,7 +223,6 @@ class SearchEngine:
         scores = {}
 
         for category, keywords in self.intent_keywords.items():
-
             matches = expanded_words.intersection(
                 keywords
             )
@@ -235,6 +243,7 @@ class SearchEngine:
             return None
 
         return best_category
+
     def is_contextual_follow_up(self, question):
 
         follow_up_phrases = [
@@ -248,7 +257,13 @@ class SearchEngine:
             "what then",
             "and the",
             "and what",
-            "when can i"
+            "when can i",
+            "what documents",
+            "what document",
+            "which documents",
+            "which document",
+            "what requirements",
+            "what requirement",
         ]
 
         cleaned_question = question.lower().strip()
@@ -349,28 +364,35 @@ class SearchEngine:
             + 0.3 * keyword_scores
         )
 
-        if (
+        is_contextual_intent = bool(
             previous_question
             and self.is_contextual_follow_up(question)
-        ):
-            final_scores += 0.10
-
-        intent = self.detect_intent(
-            self.preprocess(question)
         )
+
+        if is_contextual_intent and previous_question:
+            intent = self.detect_intent(
+                self.preprocess(previous_question)
+            )
+        else:
+            intent = self.detect_intent(
+                cleaned
+            )
 
         if intent:
             for i, category in enumerate(
                 self.df["Category"]
             ):
-                if category == intent:
-                    final_scores[i] += 0.50
 
-        final_scores = np.clip(
-            final_scores,
-            0.0,
-            1.0
-        )
+                if category == intent:
+                    if is_contextual_intent:
+                        final_scores[i] += 0.20
+                    else:
+                        final_scores[i] += 0.10
+                        final_scores = np.clip(
+    final_scores,
+    0.0,
+    1.0
+)
 
         top_matches = (
             final_scores
@@ -378,10 +400,7 @@ class SearchEngine:
         )
 
         best_match = top_matches[0]
-
-        best_score = final_scores[
-            best_match
-        ]
+        best_score = final_scores[best_match]
 
         return (
             top_matches,

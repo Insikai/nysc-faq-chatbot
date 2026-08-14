@@ -49,7 +49,13 @@ def is_follow_up(question):
         "photos",
         "photographs",
         "medical documents",
-        "medical certificate"
+        "medical certificate",
+        "what documents",
+        "what document",
+        "which documents",
+        "which document",
+        "what requirements",
+        "what requirement",
     }
 
     for phrase in follow_up_phrases:
@@ -202,6 +208,9 @@ def ask():
             context_question = conversation_history[-1]
 
 
+    print("QUESTION:", question)
+    print("PREVIOUS QUESTION:", previous_question)
+    print("CONTEXT QUESTION:", context_question)
 
     top_matches, best_match, best_score, scores = (
         search_engine.search(
