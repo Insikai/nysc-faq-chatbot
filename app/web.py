@@ -56,6 +56,11 @@ def is_follow_up(question):
         "which document",
         "what requirements",
         "what requirement",
+        "how long",
+        "how long does it take",
+        "how much time",
+        "when will",
+        "when can",
     }
 
     for phrase in follow_up_phrases:
@@ -112,7 +117,6 @@ def home():
         "index.html"
     )
 
-
 @app.route("/ask", methods=["POST"])
 def ask():
 
@@ -123,61 +127,47 @@ def ask():
             "error": "Invalid JSON request."
         }), 400
 
-
     question = data.get(
         "question",
         ""
     ).strip()
-
 
     previous_question = data.get(
         "previous_question",
         ""
     ).strip()
 
-
     conversation_history = data.get(
         "conversation_history",
         []
     )
 
-
     if not question:
-
         return jsonify({
             "error": "Please enter a question."
         }), 400
 
-
-    if not isinstance(
-        conversation_history,
-        list
-    ):
-
-        conversation_history = []
-
-
-    conversation_history = [
-        str(item).strip()
-        for item in conversation_history
-        if str(item).strip()
-    ][-5:]
+    # --------------------------------------------------
+    # BUILD CONTEXT
+    # --------------------------------------------------
 
     context_question = ""
 
-    if is_follow_up(question):
+    if is_follow_up(question) and previous_question:
 
-        if previous_question:
-
-            context_question = previous_question
-
-        elif conversation_history:
-
-            context_question = conversation_history[-1]
+        context_question = (
+            previous_question
+            + " "
+            + question
+        )
 
     print("QUESTION:", question)
     print("PREVIOUS QUESTION:", previous_question)
     print("CONTEXT QUESTION:", context_question)
+
+    # --------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------
 
     top_matches, best_match, best_score, scores = (
         search_engine.search(
@@ -186,38 +176,51 @@ def ask():
         )
     )
 
+    confidence = search_engine.get_confidence_level(
+        best_score
+    )
+
+    print(
+        "DEBUG confidence:",
+        confidence
+    )
+
+    # --------------------------------------------------
+    # BUILD TOP MATCHES
+    # --------------------------------------------------
 
     matches = []
 
     seen_questions = set()
 
-
     for i in top_matches:
 
         question_text = df.iloc[i]["Question"]
 
-
         if question_text in seen_questions:
             continue
-
 
         seen_questions.add(
             question_text
         )
 
-
         matches.append({
+
             "question": question_text,
+
             "score": round(
                 float(scores[i]),
                 2
             )
-        })
 
+        })
 
         if len(matches) == 3:
             break
 
+    # --------------------------------------------------
+    # CONFIDENCE GAP
+    # --------------------------------------------------
 
     if len(matches) > 1:
 
@@ -227,26 +230,33 @@ def ask():
 
         second_best_score = 0.0
 
-
     confidence_gap = (
         best_score
         - second_best_score
     )
 
+    # --------------------------------------------------
+    # INTENT
+    # --------------------------------------------------
+
     intent = search_engine.detect_intent(
-        preprocess_text(question)
+        search_engine.preprocess(question),
+        context_question
     )
 
-    if (
-        best_score < 0.70
-        and confidence_gap < 0.15
-        and intent is None
-    ):
+    # --------------------------------------------------
+    # LOW CONFIDENCE
+    # --------------------------------------------------
+
+    if confidence == "low":
+
         return jsonify({
+
             "answer": (
-                "I'm not confident enough "
-                "about the answer. Please try "
-                "one of the suggested questions."
+                "I'm not confident enough about "
+                "the answer. Please rephrase your "
+                "question or choose one of the "
+                "suggested questions."
             ),
 
             "category": None,
@@ -256,24 +266,21 @@ def ask():
                 2
             ),
 
-            "matches": matches,
+            "confidence": confidence,
 
-            "conversation_context": {
-                "last_question": question,
-                "history_length": len(
-                    conversation_history
-                )
-            }
+            "matches": matches
 
         })
 
-
+    # --------------------------------------------------
+    # AMBIGUOUS QUESTION
+    # --------------------------------------------------
 
     if (
-    confidence_gap < 0.10
-    and best_score < 0.90
-    and intent is None
-):
+        confidence_gap < 0.10
+        and best_score < 0.90
+        and intent is None
+    ):
 
         return jsonify({
 
@@ -291,17 +298,25 @@ def ask():
                 2
             ),
 
+            "confidence": confidence,
+
             "matches": matches,
 
             "conversation_context": {
+
                 "last_question": question,
+
                 "history_length": len(
                     conversation_history
                 )
+
             }
 
         })
 
+    # --------------------------------------------------
+    # NORMAL ANSWER
+    # --------------------------------------------------
 
     return jsonify({
 
@@ -314,17 +329,21 @@ def ask():
             2
         ),
 
+        "confidence": confidence,
+
         "matches": matches,
 
         "conversation_context": {
+
             "last_question": question,
+
             "history_length": len(
                 conversation_history
             )
+
         }
 
     })
-
 
 if __name__ == "__main__":
 

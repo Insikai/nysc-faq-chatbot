@@ -4,7 +4,18 @@ import numpy as np
 
 
 class SearchEngine:
+    def get_confidence_level(self, score):
+        """
+        Classify search confidence based on the final similarity score.
+        """
 
+        if score >= 0.75:
+            return "high"
+
+        if score >= 0.50:
+            return "medium"
+
+        return "low"
     def __init__(self, dataframe, preprocess):
 
         self.df = dataframe
@@ -252,6 +263,11 @@ class SearchEngine:
             "how about",
             "and what about",
             "and what of",
+            "how long",
+            "how long does it take",
+            "how much time",
+            "when will it",
+            "when can it",
             "what else",
             "how about that",
             "what then",
@@ -279,115 +295,48 @@ class SearchEngine:
         question,
         previous_question=""
     ):
-
-        is_follow_up = (
+        is_follow_up = bool(
             previous_question
             and self.is_contextual_follow_up(question)
         )
-
         cleaned = self.preprocess(question)
 
-        exact_matches = self.df[
-            self.df["Cleaned_Question"] == cleaned
-        ].index.tolist()
+        similarity = self.vectorizer.transform([cleaned])
+        similarity = cosine_similarity(similarity, self.X)[0]
 
-        if exact_matches:
-            best_match = exact_matches[0]
-
-            top_matches = [
-                best_match
-            ]
-
-            for i in self.df.index:
-                if i != best_match:
-                    top_matches.append(i)
-
-                if len(top_matches) == 3:
-                    break
-
-            scores = np.zeros(
-                len(self.df)
-            )
-
-            scores[best_match] = 1.0
-
-            return (
-                top_matches,
-                best_match,
-                1.0,
-                scores
-            )
-
-        user_vector = self.vectorizer.transform(
-            [cleaned]
-        )
-
-        similarity = cosine_similarity(
-            user_vector,
-            self.X
-        )[0]
-
-        if is_follow_up:
-            context_cleaned = self.preprocess(
-                previous_question
-            )
-
-            context_vector = self.vectorizer.transform(
-                [context_cleaned]
-            )
-
+        if is_follow_up and previous_question:
+            context_cleaned = self.preprocess(previous_question)
+            context_vector = self.vectorizer.transform([context_cleaned])
             context_similarity = cosine_similarity(
                 context_vector,
                 self.X
             )[0]
-
             similarity = (
-    0.7 * similarity
-    + 0.3 * context_similarity
-)
-        user_words = set(
-            cleaned.split()
-        )
+                0.7 * similarity
+                + 0.3 * context_similarity
+            )
 
-        expanded_words = set(
-            user_words
-        )
+        user_words = set(cleaned.split())
+        expanded_words = set(user_words)
 
         for word in user_words:
             if word in self.keyword_synonyms:
-                expanded_words.update(
-                    self.keyword_synonyms[word]
-                )
+                expanded_words.update(self.keyword_synonyms[word])
 
         keyword_scores = []
 
-        for faq_question in self.df[
-            "Cleaned_Question"
-        ]:
-            faq_words = set(
-                faq_question.split()
-            )
+        for faq_question in self.df["Cleaned_Question"]:
+            faq_words = set(faq_question.split())
 
             if not expanded_words:
                 keyword_scores.append(0.0)
                 continue
 
-            common_words = expanded_words.intersection(
-                faq_words
-            )
+            common_words = expanded_words.intersection(faq_words)
+            keyword_score = len(common_words) / len(expanded_words)
+            keyword_scores.append(keyword_score)
 
-            keyword_score = (
-                len(common_words)
-                / len(expanded_words)
-            )
-
-            keyword_scores.append(
-                keyword_score
-            )
-
-        keyword_scores = np.array(
-            keyword_scores
-        )
+        keyword_scores = np.array(keyword_scores)
 
         final_scores = (
             0.7 * similarity
@@ -399,50 +348,33 @@ class SearchEngine:
             and self.is_contextual_follow_up(question)
         )
 
-        if is_contextual_intent and previous_question:
-            intent = self.detect_intent(
+        if is_contextual_intent:
+            context_category = self.detect_intent(
                 self.preprocess(previous_question)
             )
-            context_category = intent
         else:
-            intent = self.detect_intent(
-                cleaned
-            )
             context_category = None
 
+        intent = self.detect_intent(cleaned)
+
         if context_category:
-            for i, category in enumerate(
-                self.df["Category"]
-            ):
+            for i, category in enumerate(self.df["Category"]):
                 if category == context_category:
-                    final_scores[i] += 0.15
+                    final_scores[i] += 0.30
 
         if intent:
-            for i, category in enumerate(
-                self.df["Category"]
-            ):
+            for i, category in enumerate(self.df["Category"]):
                 if category == intent:
                     if is_contextual_intent:
                         final_scores[i] += 0.35
                     else:
                         final_scores[i] += 0.10
 
-        final_scores = np.clip(
-            final_scores,
-            0.0,
-            1.0
-        )
+        final_scores = np.clip(final_scores, 0.0, 1.0)
 
-        top_matches = (
-            final_scores
-            .argsort()[-3:][::-1]
-        )
-
+        top_matches = final_scores.argsort()[-3:][::-1]
         best_match = top_matches[0]
-
-        best_score = final_scores[
-            best_match
-        ]
+        best_score = final_scores[best_match]
 
         return (
             top_matches,
