@@ -288,6 +288,24 @@ class SearchEngine:
             if cleaned_question.startswith(phrase):
                 return True
 
+        follow_up_patterns = [
+            "what are the requirements",
+            "what are requirements",
+            "what are the documents",
+            "what documents do i need",
+            "what documents are required",
+            "how much does it cost",
+            "how much will it cost",
+            "how long does it take",
+            "how long will it take",
+            "what about for",
+            "and for",
+        ]
+
+        for pattern in follow_up_patterns:
+            if pattern in cleaned_question:
+                return True
+
         return False
 
     def search(

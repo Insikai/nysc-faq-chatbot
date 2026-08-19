@@ -1,9 +1,8 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify, render_template, request
 
 from app.dataset import load_dataset
 from app.preprocess import preprocess_text
 from app.search import SearchEngine
-
 
 app = Flask(__name__)
 
@@ -64,11 +63,28 @@ def is_follow_up(question):
     }
 
     for phrase in follow_up_phrases:
-
         if cleaned == phrase:
             return True
 
         if cleaned.startswith(phrase + " "):
+            return True
+
+    follow_up_patterns = {
+        "what are the requirements",
+        "what are requirements",
+        "what are the documents",
+        "what documents do i need",
+        "what documents are required",
+        "how much does it cost",
+        "how much will it cost",
+        "how long does it take",
+        "how long will it take",
+        "what about for",
+        "and for",
+    }
+
+    for pattern in follow_up_patterns:
+        if pattern in cleaned:
             return True
 
     if words[0] in {
@@ -108,8 +124,77 @@ def is_follow_up(question):
             return True
 
     return False
+def get_recent_history(
+    conversation_history,
+    current_question="",
+    limit=3
+):
+    """
+    Return recent unique conversation questions,
+    excluding the current question.
+    """
 
+    if not isinstance(
+        conversation_history,
+        list
+    ):
+        return []
 
+    current_cleaned = preprocess_text(
+        current_question
+    ).strip()
+
+    recent_history = []
+    seen_questions = set()
+
+    for item in reversed(
+        conversation_history
+    ):
+
+        if isinstance(item, dict):
+
+            question = item.get(
+                "question",
+                ""
+            ).strip()
+
+        elif isinstance(item, str):
+
+            question = item.strip()
+
+        else:
+
+            continue
+
+        if not question:
+            continue
+
+        cleaned_question = preprocess_text(
+            question
+        ).strip()
+
+        if not cleaned_question:
+            continue
+
+        if cleaned_question == current_cleaned:
+            continue
+
+        if cleaned_question in seen_questions:
+            continue
+
+        seen_questions.add(
+            cleaned_question
+        )
+
+        recent_history.insert(
+            0,
+            question
+        )
+
+        if len(recent_history) >= limit:
+            break
+
+    return recent_history
 @app.route("/")
 def home():
 
@@ -147,32 +232,41 @@ def ask():
             "error": "Please enter a question."
         }), 400
 
-    # --------------------------------------------------
-    # BUILD CONTEXT
-    # --------------------------------------------------
 
+    recent_history = get_recent_history(
+    conversation_history,
+    current_question=question,
+    limit=3
+)
     context_question = ""
 
-    if is_follow_up(question) and previous_question:
+    if is_follow_up(question):
 
-        context_question = (
-            previous_question
-            + " "
-            + question
-        )
+        context_parts = []
+
+        if recent_history:
+            context_parts.extend(recent_history)
+        elif previous_question:
+            context_parts.append(previous_question)
+
+        if context_parts:
+            context_question = (
+                " ".join(context_parts)
+                + " "
+                + question
+            )
+
+    search_query = context_question if context_question else question
 
     print("QUESTION:", question)
     print("PREVIOUS QUESTION:", previous_question)
-    print("CONTEXT QUESTION:", context_question)
-
-    # --------------------------------------------------
-    # SEARCH
-    # --------------------------------------------------
+    print("RECENT HISTORY:", recent_history)
+    print("CONTEXT QUESTION:", search_query)
 
     top_matches, best_match, best_score, scores = (
         search_engine.search(
             question,
-            context_question
+            search_query
         )
     )
 
@@ -184,10 +278,6 @@ def ask():
         "DEBUG confidence:",
         confidence
     )
-
-    # --------------------------------------------------
-    # BUILD TOP MATCHES
-    # --------------------------------------------------
 
     matches = []
 
@@ -218,10 +308,6 @@ def ask():
         if len(matches) == 3:
             break
 
-    # --------------------------------------------------
-    # CONFIDENCE GAP
-    # --------------------------------------------------
-
     if len(matches) > 1:
 
         second_best_score = matches[1]["score"]
@@ -235,18 +321,10 @@ def ask():
         - second_best_score
     )
 
-    # --------------------------------------------------
-    # INTENT
-    # --------------------------------------------------
-
     intent = search_engine.detect_intent(
         search_engine.preprocess(question),
-        context_question
+        search_query
     )
-
-    # --------------------------------------------------
-    # LOW CONFIDENCE
-    # --------------------------------------------------
 
     if confidence == "low":
 
@@ -271,10 +349,6 @@ def ask():
             "matches": matches
 
         })
-
-    # --------------------------------------------------
-    # AMBIGUOUS QUESTION
-    # --------------------------------------------------
 
     if (
         confidence_gap < 0.10
@@ -314,16 +388,10 @@ def ask():
 
         })
 
-    # --------------------------------------------------
-    # NORMAL ANSWER
-    # --------------------------------------------------
-
     return jsonify({
 
         "answer": df.iloc[best_match]["Answer"],
-
-        "category": df.iloc[best_match]["Category"],
-
+        "category": None,
         "score": round(
             float(best_score),
             2
@@ -346,7 +414,6 @@ def ask():
     })
 
 if __name__ == "__main__":
-
     app.run(
         debug=True
     )
