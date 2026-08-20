@@ -375,7 +375,7 @@ class SearchEngine:
 
         intent = self.detect_intent(cleaned)
 
-        if context_category:
+        if context_category and not intent:
             for i, category in enumerate(self.df["Category"]):
                 if category == context_category:
                     final_scores[i] += 0.25

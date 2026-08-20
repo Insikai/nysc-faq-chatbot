@@ -138,3 +138,16 @@ def test_relocation_marriage_follow_up_has_reasonable_confidence():
     best_score = results[2]
 
     assert best_score >= 0.50
+
+
+def test_unrelated_what_about_question_does_not_force_previous_intent():
+    results = search_engine.search(
+        "What about camp?",
+        "Can I relocate to another state?"
+    )
+
+    best_match = results[1]
+
+    category = df.iloc[best_match]["Category"]
+
+    assert category == "Camp"
