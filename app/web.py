@@ -130,6 +130,93 @@ def get_recent_history(
     limit=3
 ):
     """
+    Return recent meaningful conversation questions.
+
+    The most recent question is given priority.
+    Very low-confidence/unknown questions are ignored
+    when possible.
+    """
+
+    if not isinstance(
+        conversation_history,
+        list
+    ):
+        return []
+
+    current_cleaned = preprocess_text(
+        current_question
+    ).strip()
+
+    recent_history = []
+    seen_questions = set()
+
+    for item in reversed(
+        conversation_history
+    ):
+
+        if isinstance(item, dict):
+
+            question = item.get(
+                "question",
+                ""
+            ).strip()
+
+            answer = item.get(
+                "answer",
+                ""
+            ).strip()
+
+        elif isinstance(item, str):
+
+            question = item.strip()
+            answer = ""
+
+        else:
+
+            continue
+
+        if not question:
+            continue
+
+        cleaned_question = preprocess_text(
+            question
+        ).strip()
+
+        if not cleaned_question:
+            continue
+
+        if cleaned_question == current_cleaned:
+            continue
+
+        if cleaned_question in seen_questions:
+            continue
+
+        if (
+            question.lower().strip()
+            in {
+                "xyzabc123",
+                "test",
+                "testing"
+            }
+        ):
+            continue
+
+        if isinstance(item, dict) and not answer:
+            continue
+
+        seen_questions.add(
+            cleaned_question
+        )
+
+        recent_history.append(
+            question
+        )
+
+        if len(recent_history) >= limit:
+            break
+
+    return recent_history
+    """
     Return recent unique conversation questions,
     excluding the current question.
     """
@@ -234,10 +321,10 @@ def ask():
 
 
     recent_history = get_recent_history(
-    conversation_history,
-    current_question=question,
-    limit=3
-)
+        conversation_history,
+        current_question=question,
+        limit=3
+    )
     context_question = ""
 
     if is_follow_up(question):
@@ -245,9 +332,13 @@ def ask():
         context_parts = []
 
         if recent_history:
-            context_parts.extend(recent_history)
+            context_parts.append(
+                recent_history[0]
+            )
         elif previous_question:
-            context_parts.append(previous_question)
+            context_parts.append(
+                previous_question
+            )
 
         if context_parts:
             context_question = (
@@ -263,10 +354,16 @@ def ask():
     print("RECENT HISTORY:", recent_history)
     print("CONTEXT QUESTION:", search_query)
 
+    context_for_search = (
+        recent_history[0]
+        if recent_history
+        else previous_question
+    )
+
     top_matches, best_match, best_score, scores = (
         search_engine.search(
             question,
-            search_query
+            context_for_search
         )
     )
 

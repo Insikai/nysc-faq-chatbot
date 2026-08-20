@@ -378,13 +378,13 @@ class SearchEngine:
         if context_category:
             for i, category in enumerate(self.df["Category"]):
                 if category == context_category:
-                    final_scores[i] += 0.30
+                    final_scores[i] += 0.40
 
         if intent:
             for i, category in enumerate(self.df["Category"]):
                 if category == intent:
                     if is_contextual_intent:
-                        final_scores[i] += 0.35
+                        final_scores[i] += 0.20
                     else:
                         final_scores[i] += 0.10
 
