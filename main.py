@@ -31,7 +31,7 @@ while True:
 
     print("\nTop Matches:")
     for rank, i in enumerate(top_matches, start=1):
-        score = similarity[0][i]
+        score = similarity[i]
         print(f"{rank}. {df.iloc[i]['Question']} ({score:.2f})")
 
     if best_score < 0.70:
