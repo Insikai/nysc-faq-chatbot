@@ -414,3 +414,89 @@ def test_unrelated_question_breaks_old_context():
 
     assert response.status_code == 200
     assert "abuja" in data["answer"].lower()
+def test_follow_up_uses_relevant_recent_context():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "What about for marriage?",
+            "conversation_history": [
+                {
+                    "question": "Where is NYSC headquarters?",
+                    "answer": "The NYSC headquarters is in Abuja, Nigeria."
+                },
+                {
+                    "question": "Can I relocate to another state?",
+                    "answer": "Relocation to another state may be possible."
+                }
+            ]
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert (
+        "marriage" in data["answer"].lower()
+        or "relocation" in data["answer"].lower()
+    )
+
+
+def test_unrelated_recent_question_does_not_replace_relevant_context():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "What documents do I need?",
+            "conversation_history": [
+                {
+                    "question": "Can I relocate to another state?",
+                    "answer": "Relocation to another state may be possible."
+                },
+                {
+                    "question": "Where is NYSC headquarters?",
+                    "answer": "The NYSC headquarters is in Abuja, Nigeria."
+                }
+            ]
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "document" in data["answer"].lower() or \
+           "camp" in data["answer"].lower()
+
+
+def test_standalone_question_does_not_force_context():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "Where is NYSC headquarters?",
+            "conversation_history": [
+                {
+                    "question": "Can I relocate to another state?",
+                    "answer": "Relocation to another state may be possible."
+                },
+                {
+                    "question": "What about for marriage?",
+                    "answer": "Marriage may be a basis for relocation."
+                }
+            ]
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "abuja" in data["answer"].lower()

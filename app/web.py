@@ -1,10 +1,42 @@
 from flask import Flask, jsonify, render_template, request
+from sklearn.metrics.pairwise import cosine_similarity
 
 from app.dataset import load_dataset
 from app.preprocess import preprocess_text
 from app.search import SearchEngine
 
 app = Flask(__name__)
+
+question_starters = {
+    "what",
+    "who",
+    "where",
+    "when",
+    "why",
+    "how",
+    "is",
+    "are",
+    "am",
+    "can",
+    "could",
+    "would",
+    "should",
+    "do",
+    "does",
+    "did",
+    "will",
+    "was",
+    "were",
+    "which",
+    "whom",
+    "whose",
+    "have",
+    "has",
+    "had",
+    "may",
+    "might",
+    "must",
+}
 
 
 df = load_dataset()
@@ -31,50 +63,7 @@ def is_follow_up(question):
 
     words = cleaned.split()
 
-    follow_up_phrases = {
-        "what about",
-        "how about",
-        "which one",
-        "which ones",
-        "another state",
-        "to another state",
-        "that state",
-        "the other one",
-        "the other",
-        "documents",
-        "document",
-        "requirements",
-        "requirement",
-        "photos",
-        "photographs",
-        "medical documents",
-        "medical certificate",
-        "what documents",
-        "what document",
-        "which documents",
-        "which document",
-        "what requirements",
-        "what requirement",
-        "how long",
-        "how long does it take",
-        "how much time",
-        "when will",
-        "when can",
-    }
-
-    for phrase in follow_up_phrases:
-        if cleaned == phrase:
-            return True
-
-        if cleaned.startswith(phrase + " "):
-            return True
-
     follow_up_patterns = {
-        "what are the requirements",
-        "what are requirements",
-        "what are the documents",
-        "what documents do i need",
-        "what documents are required",
         "how much does it cost",
         "how much will it cost",
         "how long does it take",
@@ -99,29 +88,6 @@ def is_follow_up(question):
         "without"
     }:
         return True
-
-    if len(words) <= 2:
-
-        question_starters = {
-            "can",
-            "could",
-            "would",
-            "should",
-            "will",
-            "what",
-            "where",
-            "when",
-            "who",
-            "how",
-            "why",
-            "is",
-            "are",
-            "do",
-            "does"
-        }
-
-        if words[0] not in question_starters:
-            return True
 
     return False
 def get_recent_history(
@@ -282,6 +248,61 @@ def get_recent_history(
             break
 
     return recent_history
+def select_relevant_context(
+    question,
+    recent_history
+):
+    """
+    Select the most relevant recent question
+    as conversational context.
+    """
+
+    if not recent_history:
+        return ""
+
+    if is_follow_up(question):
+        return recent_history[0]
+
+    cleaned_question = preprocess_text(
+        question
+    ).strip()
+
+    if not cleaned_question:
+        return ""
+
+    question_vector = search_engine.vectorizer.transform(
+        [cleaned_question]
+    )
+
+    best_context = ""
+    best_score = 0.0
+
+    for previous_question in recent_history:
+
+        cleaned_previous = preprocess_text(
+            previous_question
+        ).strip()
+
+        if not cleaned_previous:
+            continue
+
+        previous_vector = search_engine.vectorizer.transform(
+            [cleaned_previous]
+        )
+
+        similarity = cosine_similarity(
+            question_vector,
+            previous_vector
+        )[0][0]
+
+        if similarity > best_score:
+            best_score = similarity
+            best_context = previous_question
+
+    if best_score >= 0.10:
+        return best_context
+
+    return ""
 @app.route("/")
 def home():
 
@@ -363,11 +384,13 @@ def ask():
     print("RECENT HISTORY:", recent_history)
     print("CONTEXT QUESTION:", search_query)
 
-    context_for_search = (
-        recent_history[0]
-        if recent_history
-        else previous_question
+    context_for_search = select_relevant_context(
+        question,
+        recent_history
     )
+
+    if not context_for_search:
+        context_for_search = previous_question
 
     top_matches, best_match, best_score, scores = (
         search_engine.search(
