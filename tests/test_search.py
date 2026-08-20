@@ -129,3 +129,12 @@ def test_camp_then_photographs_follow_up():
     category = df.iloc[best_match]["Category"]
 
     assert category == "Camp"
+def test_relocation_marriage_follow_up_has_reasonable_confidence():
+    results = search_engine.search(
+        "What about for marriage?",
+        "Can I relocate to another state?"
+    )
+
+    best_score = results[2]
+
+    assert best_score >= 0.50
