@@ -221,3 +221,39 @@ def test_unrelated_what_about_question_stays_in_new_topic():
     category = df.iloc[best_match]["Category"]
 
     assert category == "Camp"
+def test_low_confidence_question_returns_fallback():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "How do I do it?"
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["confidence"] == "low"
+    assert data["category"] is None
+    assert "not confident enough" in data["answer"].lower()
+def test_high_confidence_question_returns_answer():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "Where is NYSC headquarters?"
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["confidence"] == "high"
+    assert data["category"] is None
+    assert "Abuja" in data["answer"]
