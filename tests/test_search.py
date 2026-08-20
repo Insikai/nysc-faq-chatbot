@@ -257,3 +257,52 @@ def test_high_confidence_question_returns_answer():
     assert data["confidence"] == "high"
     assert data["category"] is None
     assert "Abuja" in data["answer"]
+def test_empty_question_returns_error():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": ""
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "Please enter a question." in data["error"]
+
+
+def test_missing_question_returns_error():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={}
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "Please enter a question." in data["error"]
+
+
+def test_invalid_json_returns_error():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        data="not valid json",
+        content_type="application/json"
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "Invalid JSON request." in data["error"]

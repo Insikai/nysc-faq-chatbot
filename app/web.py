@@ -292,9 +292,19 @@ def home():
 @app.route("/ask", methods=["POST"])
 def ask():
 
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception:
+        return jsonify({
+            "error": "Invalid JSON request."
+        }), 400
 
-    if not data:
+    if data is None:
+        return jsonify({
+            "error": "Invalid JSON request."
+        }), 400
+
+    if not isinstance(data, dict):
         return jsonify({
             "error": "Invalid JSON request."
         }), 400
@@ -318,7 +328,6 @@ def ask():
         return jsonify({
             "error": "Please enter a question."
         }), 400
-
 
     recent_history = get_recent_history(
         conversation_history,
@@ -446,7 +455,6 @@ def ask():
             "matches": matches
 
         })
-
     if (
         confidence_gap < 0.10
         and best_score < 0.90
@@ -489,6 +497,7 @@ def ask():
 
         "answer": df.iloc[best_match]["Answer"],
         "category": None,
+
         "score": round(
             float(best_score),
             2
@@ -507,9 +516,7 @@ def ask():
             )
 
         }
-
     })
-
 if __name__ == "__main__":
     app.run(
         debug=True
