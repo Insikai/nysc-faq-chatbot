@@ -306,7 +306,31 @@ class SearchEngine:
             if pattern in cleaned_question:
                 return True
 
-        return False
+            return False
+
+    def is_vague_question(self, question):
+        """
+        Detect questions that are too generic to safely answer.
+        """
+
+        vague_phrases = {
+            "what do i need",
+            "what do i need?",
+            "how do i do it",
+            "how do i do it?",
+            "what is required",
+            "what is required?",
+            "what are the requirements",
+            "what are the requirements?",
+            "how does it work",
+            "how does it work?",
+            "what about it",
+            "what about it?"
+        }
+
+        cleaned = question.lower().strip()
+
+        return cleaned in vague_phrases
 
     def search(
         self,
@@ -318,6 +342,13 @@ class SearchEngine:
             and self.is_contextual_follow_up(question)
         )
         cleaned = self.preprocess(question)
+        if self.is_vague_question(question):
+            return (
+                np.array([0, 1, 2]),
+                0,
+                0.0,
+                np.zeros(len(self.df))
+            )
 
         similarity = self.vectorizer.transform([cleaned])
         similarity = cosine_similarity(similarity, self.X)[0]

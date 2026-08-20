@@ -3,7 +3,6 @@ from app.preprocess import preprocess_text
 from app.search import SearchEngine
 
 
-
 df = load_dataset()
 
 df["Cleaned_Question"] = df["Question"].apply(
@@ -90,7 +89,8 @@ def test_unrelated_question_does_not_use_old_context():
     answer = df.iloc[best_match]["Answer"]
 
     assert "Abuja" in answer
-    
+
+
 def test_relocation_then_marriage_follow_up():
     results = search_engine.search(
         "Can I relocate to another state?",
@@ -129,6 +129,8 @@ def test_camp_then_photographs_follow_up():
     category = df.iloc[best_match]["Category"]
 
     assert category == "Camp"
+
+
 def test_relocation_marriage_follow_up_has_reasonable_confidence():
     results = search_engine.search(
         "What about for marriage?",
@@ -151,3 +153,43 @@ def test_unrelated_what_about_question_does_not_force_previous_intent():
     category = df.iloc[best_match]["Category"]
 
     assert category == "Camp"
+
+
+def test_unknown_question_has_low_confidence():
+    results = search_engine.search(
+        "xyzabc123"
+    )
+
+    best_score = results[2]
+
+    assert best_score < 0.50
+
+
+def test_headquarters_has_high_confidence():
+    results = search_engine.search(
+        "Where is NYSC headquarters?"
+    )
+
+    best_score = results[2]
+
+    assert best_score >= 0.75
+
+
+def test_relocation_question_has_high_confidence():
+    results = search_engine.search(
+        "Can I relocate to another state?"
+    )
+
+    best_score = results[2]
+
+    assert best_score >= 0.75
+
+
+def test_vague_question_has_low_confidence():
+    results = search_engine.search(
+        "What do I need?"
+    )
+
+    best_score = results[2]
+
+    assert best_score < 0.50
