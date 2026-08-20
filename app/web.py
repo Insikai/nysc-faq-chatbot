@@ -519,7 +519,8 @@ def ask():
     return jsonify({
 
         "answer": df.iloc[best_match]["Answer"],
-        "category": None,
+
+        "category": df.iloc[best_match]["Category"],
 
         "score": round(
             float(best_score),
@@ -539,6 +540,7 @@ def ask():
             )
 
         }
+
     })
 if __name__ == "__main__":
     app.run(

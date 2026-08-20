@@ -255,7 +255,7 @@ def test_high_confidence_question_returns_answer():
 
     assert response.status_code == 200
     assert data["confidence"] == "high"
-    assert data["category"] is None
+    assert data["category"] == "Office"
     assert "Abuja" in data["answer"]
 def test_empty_question_returns_error():
     from app.web import app
@@ -338,10 +338,9 @@ def test_three_turn_relocation_conversation():
     data = response.get_json()
 
     assert response.status_code == 200
-    assert data["category"] is None
+    assert data["category"] == "Relocation"
     assert "marriage" in data["answer"].lower() or \
         "relocation" in data["answer"].lower()
-
 
 def test_recent_context_is_used_for_follow_up():
     from app.web import app
@@ -379,7 +378,7 @@ def test_recent_context_is_used_for_follow_up():
 
     assert response.status_code == 200
     assert "relocation" in data["answer"].lower() or \
-           "marriage" in data["answer"].lower()
+    "marriage" in data["answer"].lower()
 
 
 def test_unrelated_question_breaks_old_context():
@@ -471,7 +470,7 @@ def test_unrelated_recent_question_does_not_replace_relevant_context():
 
     assert response.status_code == 200
     assert "document" in data["answer"].lower() or \
-           "camp" in data["answer"].lower()
+            "camp" in data["answer"].lower()
 
 
 def test_standalone_question_does_not_force_context():
@@ -500,3 +499,22 @@ def test_standalone_question_does_not_force_context():
 
     assert response.status_code == 200
     assert "abuja" in data["answer"].lower()
+    
+def test_high_confidence_response_includes_category():
+    from app.web import app
+
+    client = app.test_client()
+
+    response = client.post(
+        "/ask",
+        json={
+            "question": "Where is NYSC headquarters?"
+        }
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["category"] == "Office"
+    assert data["confidence"] == "high"
+    assert data["score"] == 1.0
