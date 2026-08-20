@@ -193,3 +193,31 @@ def test_vague_question_has_low_confidence():
     best_score = results[2]
 
     assert best_score < 0.50
+
+
+def test_marriage_follow_up_has_reliable_confidence():
+    results = search_engine.search(
+        "What about for marriage?",
+        "Can I relocate to another state?"
+    )
+
+    best_match = results[1]
+    best_score = results[2]
+
+    category = df.iloc[best_match]["Category"]
+
+    assert category == "Relocation"
+    assert best_score >= 0.50
+
+
+def test_unrelated_what_about_question_stays_in_new_topic():
+    results = search_engine.search(
+        "What about camp?",
+        "Can I relocate to another state?"
+    )
+
+    best_match = results[1]
+
+    category = df.iloc[best_match]["Category"]
+
+    assert category == "Camp"
